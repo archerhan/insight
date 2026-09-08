@@ -1,0 +1,227 @@
+<div id="profile-mockup">
+<style>
+  #profile-mockup {
+    color-scheme: light dark;
+    --pf-bg: light-dark(#f6f4ef, #161619);
+    --pf-surface: light-dark(#ffffff, #202024);
+    --pf-surface-2: light-dark(#f1eee7, #26262c);
+    --pf-ink: light-dark(#23211d, #eae7e0);
+    --pf-ink-2: light-dark(#6b675e, #a8a49b);
+    --pf-border: light-dark(#e3ded3, #34343a);
+    --pf-line: light-dark(#d9d4c9, #3d3d44);
+    --pf-pro: light-dark(#137a4b, #67c795);
+    --pf-pro-bg: light-dark(#e6f3eb, #0e2b1f);
+    --pf-con: light-dark(#c03a2b, #ef8a80);
+    --pf-con-bg: light-dark(#faece9, #331a16);
+    --pf-violet: light-dark(#5b4bce, #a99aef);
+    --pf-violet-bg: light-dark(#efeefa, #262046);
+    --pf-amber: light-dark(#a85d0a, #e8a65c);
+    --pf-amber-bg: light-dark(#fbf0dd, #35270f);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--pf-bg);
+    color: var(--pf-ink);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  #profile-mockup * { box-sizing: border-box; }
+  #profile-mockup button { font: inherit; border: 1px solid var(--pf-line); background: var(--pf-surface); color: var(--pf-ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  #profile-mockup button.primary { background: var(--pf-violet); border-color: transparent; color: #fff; }
+  #profile-mockup button.ghost { background: transparent; }
+  #profile-mockup .appbar { display: flex; align-items: center; gap: 18px; padding: 0 22px; height: 54px; border-bottom: 1px solid var(--pf-border); background: var(--pf-surface); }
+  #profile-mockup .brand { display: flex; align-items: center; gap: 7px; font-weight: 500; font-size: 16px; }
+  #profile-mockup .brand-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--pf-violet); color: #fff; display: inline-flex; align-items: center; justify-content: center; }
+  #profile-mockup .nav { display: flex; gap: 2px; font-size: 14px; color: var(--pf-ink-2); }
+  #profile-mockup .nav .item { padding: 6px 11px; border-radius: 7px; }
+  #profile-mockup .nav .item.active { background: var(--pf-surface-2); color: var(--pf-ink); }
+  #profile-mockup .appbar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  #profile-mockup .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--pf-violet-bg); color: var(--pf-violet); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+  #profile-mockup .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 22px 70px; }
+  #profile-mockup .head-card { display: flex; gap: 18px; align-items: flex-start; background: var(--pf-surface); border: 1px solid var(--pf-border); border-radius: 12px; padding: 18px 20px; flex-wrap: wrap; }
+  #profile-mockup .big-avatar { width: 58px; height: 58px; border-radius: 50%; background: var(--pf-violet-bg); color: var(--pf-violet); display: inline-flex; align-items: center; justify-content: center; font-size: 24px; flex: none; }
+  #profile-mockup .who { flex: 1 1 260px; min-width: 0; }
+  #profile-mockup .who .name { font-size: 20px; font-weight: 500; }
+  #profile-mockup .who .bio { color: var(--pf-ink-2); font-size: 13.5px; margin-top: 3px; }
+  #profile-mockup .who .meta { font-size: 12.5px; color: var(--pf-ink-2); margin-top: 5px; }
+  #profile-mockup .stats { display: flex; gap: 0; border: 1px solid var(--pf-border); border-radius: 10px; overflow: hidden; flex: 1 1 320px; }
+  #profile-mockup .stats .cell { flex: 1; padding: 10px 12px; }
+  #profile-mockup .stats .cell + .cell { border-left: 1px solid var(--pf-border); }
+  #profile-mockup .stats .v { font-size: 17px; font-weight: 500; }
+  #profile-mockup .stats .k { font-size: 12px; color: var(--pf-ink-2); }
+  #profile-mockup .head-actions { display: flex; flex-direction: column; gap: 8px; }
+  #profile-mockup .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  #profile-mockup .chip.violet { color: var(--pf-violet); background: var(--pf-violet-bg); }
+  #profile-mockup .chip.green { color: var(--pf-pro); background: var(--pf-pro-bg); }
+  #profile-mockup .chip.red { color: var(--pf-con); background: var(--pf-con-bg); }
+  #profile-mockup .chip.amber { color: var(--pf-amber); background: var(--pf-amber-bg); }
+  #profile-mockup .chip.gray { color: var(--pf-ink-2); background: var(--pf-surface-2); }
+  #profile-mockup .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; margin-top: 18px; align-items: start; }
+  #profile-mockup .card { background: var(--pf-surface); border: 1px solid var(--pf-border); border-radius: 12px; padding: 16px 18px; }
+  #profile-mockup .card + .card { margin-top: 14px; }
+  #profile-mockup .card h2 { margin: 0 0 12px; font-size: 14.5px; font-weight: 500; display: flex; align-items: center; gap: 7px; }
+  #profile-mockup .card h2 .hint { font-size: 12px; color: var(--pf-ink-2); font-weight: 400; }
+  #profile-mockup .tl { position: relative; padding-left: 14px; }
+  #profile-mockup .tl-item { position: relative; padding: 0 0 16px 14px; border-left: 2px solid var(--pf-border); }
+  #profile-mockup .tl-item:last-child { border-left-color: transparent; }
+  #profile-mockup .tl-dot { position: absolute; left: -6px; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--pf-violet); }
+  #profile-mockup .tl-date { font-size: 11.5px; color: var(--pf-ink-2); }
+  #profile-mockup .tl-change { font-size: 14px; margin-top: 2px; }
+  #profile-mockup .tl-change .from { color: var(--pf-ink-2); text-decoration: line-through; }
+  #profile-mockup .tl-change .arrow { margin: 0 6px; color: var(--pf-violet); }
+  #profile-mockup .tl-quote { margin-top: 6px; font-size: 13px; color: var(--pf-ink-2); border-left: 2px solid var(--pf-line); padding-left: 10px; }
+  #profile-mockup .tl-by { font-size: 12px; color: var(--pf-ink-2); margin-top: 6px; }
+  #profile-mockup .tl-note { font-size: 12.5px; color: var(--pf-ink-2); }
+  #profile-mockup .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--pf-border); margin-bottom: 12px; }
+  #profile-mockup .tabs button { border: 0; background: transparent; border-radius: 7px 7px 0 0; padding: 7px 13px; font-size: 13.5px; color: var(--pf-ink-2); }
+  #profile-mockup .tabs button.active { color: var(--pf-violet); background: var(--pf-violet-bg); font-weight: 500; }
+  #profile-mockup .rec-row { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px dashed var(--pf-line); }
+  #profile-mockup .rec-row:first-child { border-top: 0; }
+  #profile-mockup .rec-row .main { flex: 1; min-width: 0; }
+  #profile-mockup .rec-row .t { font-size: 13.5px; font-weight: 500; }
+  #profile-mockup .rec-row .d { font-size: 12px; color: var(--pf-ink-2); margin-top: 2px; }
+  #profile-mockup .badges { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  #profile-mockup .badge { display: flex; gap: 8px; align-items: center; border: 1px solid var(--pf-border); border-radius: 8px; padding: 7px 9px; font-size: 12.5px; }
+  #profile-mockup .badge .ic { width: 26px; height: 26px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex: none; }
+  #profile-mockup .kv { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 4px 0; }
+  #profile-mockup .kv .k { color: var(--pf-ink-2); }
+  #profile-mockup i { width: 15px; height: 15px; }
+  @media (max-width: 980px) {
+    #profile-mockup .layout { grid-template-columns: minmax(0, 1fr); }
+    #profile-mockup .rail { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    #profile-mockup .card + .card { margin-top: 0; }
+    #profile-mockup .nav { display: none; }
+  }
+  @media (max-width: 640px) {
+    #profile-mockup .wrap { padding: 18px 14px 50px; }
+    #profile-mockup .stats { flex-direction: column; }
+    #profile-mockup .stats .cell + .cell { border-left: 0; border-top: 1px solid var(--pf-border); }
+    #profile-mockup .rail { display: flex; flex-direction: column; }
+  }
+</style>
+
+<header class="appbar">
+  <div class="brand"><span class="brand-mark"><i data-lucide="scale" aria-hidden="true"></i></span>灼见</div>
+  <nav class="nav" aria-label="主导航">
+    <span class="item">广场</span>
+    <span class="item active">我的战绩</span>
+  </nav>
+  <div class="right">
+    <button type="button" class="ghost" aria-label="通知"><i data-lucide="bell" aria-hidden="true"></i></button>
+    <span class="avatar">明</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="head-card">
+    <span class="big-avatar">明</span>
+    <div class="who">
+      <div class="name">想飞的小明</div>
+      <div class="bio">正在学习做一个会认错的人 · 民宿议题发起人</div>
+      <div class="meta">加入灼见 62 天 · 陪审 · 白银</div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <span class="chip violet">早期预言家</span>
+        <span class="chip green">敢于认错 ×2</span>
+        <span class="chip gray">复述大师</span>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="cell"><div class="v">76</div><div class="k">判断力 · 押中 8/12</div></div>
+      <div class="cell"><div class="v">9</div><div class="k">贡献 · 采纳 7 / 说服 2</div></div>
+      <div class="cell"><div class="v">2</div><div class="k">诚实 · 改换阵营 2</div></div>
+    </div>
+    <div class="head-actions"><button type="button" class="ghost">编辑资料</button><button type="button" class="ghost">战绩说明</button></div>
+  </div>
+
+  <div class="layout">
+    <main>
+      <div class="card">
+        <h2>立场时间线 <span class="hint">每一次改变都有证词，可被公开查看</span></h2>
+        <div class="tl">
+          <div class="tl-item">
+            <span class="tl-dot"></span>
+            <div class="tl-date">08-30 · 民宿议题</div>
+            <div class="tl-change"><span class="from">支持裸辞开民宿</span><span class="arrow">→</span><span>倾向"先试住 3–4 周再决定"</span></div>
+            <div class="tl-quote">"@老张 的试住方案击中了我的盲区：我赌的是生活方式，而不是经营能力。先验证再辞职，成本可控。"</div>
+            <div class="tl-by">被 @老张（判断力 91）说服 · 诚实 +1 · 原倾向维持 18 天</div>
+          </div>
+          <div class="tl-item">
+            <span class="tl-dot"></span>
+            <div class="tl-date">07-11 · 副业议题</div>
+            <div class="tl-change"><span class="from">下班做副业一定没结果</span><span class="arrow">→</span><span>视行业而定</span></div>
+            <div class="tl-quote">"三条可复用到主业的技能型副业案例让我改了判断——我混淆了'多数失败'和'必然失败'。"</div>
+            <div class="tl-by">被 3 条数据论据说服 · 诚实 +1 · 原倾向维持 9 天</div>
+          </div>
+        </div>
+        <p class="tl-note">加入灼见 62 天 · 立场更新 2 次 · 每次更新均附有具体依据</p>
+      </div>
+
+      <div class="card">
+        <div class="tabs" role="tablist" aria-label="内容分类">
+          <button type="button" class="active" data-tab="topics" aria-selected="true">我的话题</button>
+          <button type="button" data-tab="verdicts" aria-selected="false">我的裁定</button>
+          <button type="button" data-tab="bets" aria-selected="false">我的押注</button>
+        </div>
+
+        <div id="tab-topics">
+          <div class="rec-row"><div class="main"><div class="t">要不要裸辞去大理开民宿？</div><div class="d">发起 · 已收敛 v3 · 带 1 条未决反驳</div></div><span class="chip violet">查看结论书</span></div>
+          <div class="rec-row"><div class="main"><div class="t">下班做副业是不是一定没结果？</div><div class="d">参与 · 已收敛 v2</div></div><span class="chip gray">已收敛</span></div>
+          <div class="rec-row"><div class="main"><div class="t">要不要回老家考编？</div><div class="d">围观 · 进行中 · 未回应 3 天</div></div><span class="chip amber">去围观</span></div>
+        </div>
+
+        <div id="tab-verdicts" hidden>
+          <div class="rec-row"><div class="main"><div class="t">「证照周期超 6 个月」是否算跑题</div><div class="d">轻陪审 · 3 人 · 你的裁定：相关，需楼主回应</div></div><span class="chip green">裁定正确</span></div>
+          <div class="rec-row"><div class="main"><div class="t">「亏损样本」反驳是否击穿主张</div><div class="d">轻陪审 · 5 人 · 你的裁定：未击穿</div></div><span class="chip red">裁定被推翻</span></div>
+          <div class="rec-row"><div class="main"><div class="t">「试住方案」是否应被采纳</div><div class="d">重陪审 · 5 人 · 你的裁定：采纳</div></div><span class="chip amber">待终局验证</span></div>
+        </div>
+
+        <div id="tab-bets" hidden>
+          <div class="rec-row"><div class="main"><div class="t">裸辞开民宿三个月内会后悔</div><div class="d">押注 100 币 · 到期 2026-11-01</div></div><span class="chip amber">揭晓中</span></div>
+          <div class="rec-row"><div class="main"><div class="t">副业议题：技能型副业可复制</div><div class="d">押注 50 币 · 到期 2026-08-20</div></div><span class="chip green">已赢 +150</span></div>
+          <div class="rec-row"><div class="main"><div class="t">考编议题：县直岗位三年内降薪</div><div class="d">押注 30 币 · 到期 2026-10-15</div></div><span class="chip gray">已输 -30</span></div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="rail">
+      <div class="card">
+        <h2>徽章墙</h2>
+        <div class="badges">
+          <div class="badge"><span class="ic" style="background:var(--pf-violet-bg);color:var(--pf-violet)">预</span>早期预言家</div>
+          <div class="badge"><span class="ic" style="background:var(--pf-pro-bg);color:var(--pf-pro)">诚</span>敢于认错 ×2</div>
+          <div class="badge"><span class="ic" style="background:var(--pf-surface-2);color:var(--pf-ink-2)">审</span>陪审 · 白银</div>
+          <div class="badge"><span class="ic" style="background:var(--pf-amber-bg);color:var(--pf-amber)">核</span>数据核验官</div>
+          <div class="badge"><span class="ic" style="background:var(--pf-surface-2);color:var(--pf-ink-2)">复</span>复述大师</div>
+          <div class="badge"><span class="ic" style="background:var(--pf-con-bg);color:var(--pf-con)">守</span>守擂 3 次</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>信誉与权限</h2>
+        <div class="kv"><span class="k">裁定权重</span><span>2.1（近 30 次一致率 72%）</span></div>
+        <div class="kv"><span class="k">飘忽度</span><span>低（更新均附新证据）</span></div>
+        <div class="kv"><span class="k">未结惩罚</span><span>0</span></div>
+        <div class="kv"><span class="k">flag 配额</span><span>5 / 天</span></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function () {
+  var tabs = {
+    topics: document.getElementById("tab-topics"),
+    verdicts: document.getElementById("tab-verdicts"),
+    bets: document.getElementById("tab-bets")
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("#profile-mockup .tabs button"), function (b) {
+    b.addEventListener("click", function () {
+      var key = b.getAttribute("data-tab");
+      Array.prototype.forEach.call(document.querySelectorAll("#profile-mockup .tabs button"), function (x) {
+        var on = x === b;
+        x.classList.toggle("active", on);
+        x.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      Object.keys(tabs).forEach(function (k) { tabs[k].hidden = k !== key; });
+    });
+  });
+})();
+</script>
+</div>

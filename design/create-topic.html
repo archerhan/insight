@@ -1,0 +1,312 @@
+<div id="create-mockup">
+<style>
+  #create-mockup {
+    color-scheme: light dark;
+    --ct-bg: light-dark(#f6f4ef, #161619);
+    --ct-surface: light-dark(#ffffff, #202024);
+    --ct-surface-2: light-dark(#f1eee7, #26262c);
+    --ct-ink: light-dark(#23211d, #eae7e0);
+    --ct-ink-2: light-dark(#6b675e, #a8a49b);
+    --ct-border: light-dark(#e3ded3, #34343a);
+    --ct-line: light-dark(#d9d4c9, #3d3d44);
+    --ct-pro: light-dark(#137a4b, #67c795);
+    --ct-pro-bg: light-dark(#e6f3eb, #0e2b1f);
+    --ct-con: light-dark(#c03a2b, #ef8a80);
+    --ct-con-bg: light-dark(#faece9, #331a16);
+    --ct-violet: light-dark(#5b4bce, #a99aef);
+    --ct-violet-bg: light-dark(#efeefa, #262046);
+    --ct-amber: light-dark(#a85d0a, #e8a65c);
+    --ct-amber-bg: light-dark(#fbf0dd, #35270f);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--ct-bg);
+    color: var(--ct-ink);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  #create-mockup * { box-sizing: border-box; }
+  #create-mockup button { font: inherit; border: 1px solid var(--ct-line); background: var(--ct-surface); color: var(--ct-ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  #create-mockup button.primary { background: var(--ct-violet); border-color: transparent; color: #fff; }
+  #create-mockup button.ghost { background: transparent; }
+  #create-mockup .appbar { display: flex; align-items: center; gap: 18px; padding: 0 22px; height: 54px; border-bottom: 1px solid var(--ct-border); background: var(--ct-surface); }
+  #create-mockup .brand { display: flex; align-items: center; gap: 7px; font-weight: 500; font-size: 16px; }
+  #create-mockup .brand-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--ct-violet); color: #fff; display: inline-flex; align-items: center; justify-content: center; }
+  #create-mockup .nav { display: flex; gap: 2px; font-size: 14px; color: var(--ct-ink-2); }
+  #create-mockup .nav .item { padding: 6px 11px; border-radius: 7px; }
+  #create-mockup .nav .item.active { background: var(--ct-surface-2); color: var(--ct-ink); }
+  #create-mockup .appbar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  #create-mockup .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--ct-violet-bg); color: var(--ct-violet); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+  #create-mockup .wrap { max-width: 780px; margin: 0 auto; padding: 26px 22px 70px; }
+  #create-mockup h1 { font-size: 23px; font-weight: 500; margin: 0 0 18px; }
+  #create-mockup .steps { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+  #create-mockup .step-dot { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ct-ink-2); }
+  #create-mockup .step-dot .num { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--ct-line); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+  #create-mockup .step-dot.active { color: var(--ct-violet); }
+  #create-mockup .step-dot.active .num { background: var(--ct-violet); color: #fff; border-color: transparent; }
+  #create-mockup .step-dot.done .num { background: var(--ct-surface-2); }
+  #create-mockup .step-line { flex: 1; height: 1px; background: var(--ct-line); }
+  #create-mockup .card { background: var(--ct-surface); border: 1px solid var(--ct-border); border-radius: 12px; padding: 20px 22px; }
+  #create-mockup .field { margin-bottom: 18px; }
+  #create-mockup .field .flabel { display: block; font-size: 13.5px; font-weight: 500; margin-bottom: 7px; }
+  #create-mockup .field .fdesc { display: block; font-size: 12.5px; color: var(--ct-ink-2); margin: 3px 0 0; }
+  #create-mockup input[type="text"], #create-mockup textarea, #create-mockup input[type="date"] {
+    width: 100%; font: inherit; color: var(--ct-ink);
+    background: var(--ct-bg); border: 1px solid var(--ct-line);
+    border-radius: 8px; padding: 9px 11px;
+  }
+  #create-mockup textarea { min-height: 88px; resize: vertical; }
+  #create-mockup .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  #create-mockup .type-card { text-align: left; border: 1.5px solid var(--ct-line); border-radius: 10px; padding: 14px; background: var(--ct-surface); }
+  #create-mockup .type-card .tt { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 7px; }
+  #create-mockup .type-card .td { font-size: 12.5px; color: var(--ct-ink-2); margin-top: 6px; }
+  #create-mockup .type-card.active { border-color: var(--ct-violet); background: var(--ct-violet-bg); }
+  #create-mockup .type-note { margin-top: 14px; font-size: 13px; color: var(--ct-ink-2); background: var(--ct-surface-2); border-radius: 8px; padding: 10px 12px; }
+  #create-mockup .seg { display: inline-flex; border: 1px solid var(--ct-line); border-radius: 8px; overflow: hidden; flex-wrap: wrap; }
+  #create-mockup .seg button { border: 0; border-radius: 0; background: var(--ct-surface); font-size: 13px; padding: 5px 13px; }
+  #create-mockup .seg button.active { background: var(--ct-surface-2); font-weight: 500; }
+  #create-mockup .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  #create-mockup .chips button { font-size: 12.5px; border-radius: 999px; padding: 3px 12px; }
+  #create-mockup .chips button.active { background: var(--ct-violet-bg); color: var(--ct-violet); border-color: transparent; }
+  #create-mockup .switch-row { display: flex; gap: 12px; align-items: center; padding: 11px 0; border-top: 1px dashed var(--ct-line); }
+  #create-mockup .switch-row:first-child { border-top: 0; }
+  #create-mockup .switch-row .info { flex: 1; }
+  #create-mockup .switch-row .info .t { font-size: 14px; font-weight: 500; }
+  #create-mockup .switch-row .info .d { font-size: 12.5px; color: var(--ct-ink-2); }
+  #create-mockup .switch-row .switch { flex: none; width: 40px; height: 22px; border-radius: 999px; border: 1px solid var(--ct-line); background: var(--ct-surface-2); position: relative; padding: 0; }
+  #create-mockup .switch-row .switch.on { background: var(--ct-violet); border-color: transparent; }
+  #create-mockup .switch-row .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s ease; }
+  #create-mockup .switch-row .switch.on::after { left: 20px; }
+  #create-mockup .switch-row input[type="date"] { width: auto; }
+  #create-mockup .summary { margin-top: 16px; background: var(--ct-surface-2); border-radius: 8px; padding: 12px 14px; font-size: 13px; }
+  #create-mockup .summary .row { display: flex; gap: 8px; padding: 2px 0; }
+  #create-mockup .summary .row .k { color: var(--ct-ink-2); width: 84px; flex: none; }
+  #create-mockup .wizard-nav { display: flex; gap: 10px; align-items: center; margin-top: 20px; }
+  #create-mockup .wizard-nav .spacer { flex: 1; }
+  #create-mockup .note { font-size: 12.5px; color: var(--ct-ink-2); margin-top: 14px; }
+  #create-mockup .hint-msg { font-size: 12.5px; color: var(--ct-amber); margin-top: 6px; }
+  #create-mockup i { width: 15px; height: 15px; }
+  @media (max-width: 640px) {
+    #create-mockup .wrap { padding: 18px 14px 50px; }
+    #create-mockup .type-grid { grid-template-columns: minmax(0, 1fr); }
+    #create-mockup .nav { display: none; }
+  }
+</style>
+
+<header class="appbar">
+  <div class="brand"><span class="brand-mark"><i data-lucide="scale" aria-hidden="true"></i></span>灼见</div>
+  <nav class="nav" aria-label="主导航">
+    <span class="item active">广场</span>
+    <span class="item">我的战绩</span>
+  </nav>
+  <div class="right">
+    <button type="button" class="ghost" aria-label="通知"><i data-lucide="bell" aria-hidden="true"></i></button>
+    <span class="avatar">明</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <h1>发起话题</h1>
+  <div class="steps" aria-label="步骤">
+    <span class="step-dot active" data-step="1"><span class="num">1</span>类型</span>
+    <span class="step-line"></span>
+    <span class="step-dot" data-step="2"><span class="num">2</span>主张与论据</span>
+    <span class="step-line"></span>
+    <span class="step-dot" data-step="3"><span class="num">3</span>规则与发布</span>
+  </div>
+
+  <section class="card" id="step-1">
+    <div class="type-grid">
+      <button type="button" class="type-card active" data-type="decision" aria-pressed="true">
+        <span class="tt"><i data-lucide="compass" aria-hidden="true"></i>我在做选择</span>
+        <span class="td">买房、跳槽、分手、辞职……一个真实纠结，请陌生人帮你权衡利弊、补充盲区。</span>
+      </button>
+      <button type="button" class="type-card" data-type="claim" aria-pressed="false">
+        <span class="tt"><i data-lucide="scale" aria-hidden="true"></i>我要验证一个观点</span>
+        <span class="td">"X 是否成立"——双方摆论据、讲逻辑，让观点接受反驳与检验。</span>
+      </button>
+    </div>
+    <div class="type-note" id="type-note">常见场景：要不要裸辞 / 要不要回老家 / 该不该分手 / 房子现在买还是再等等。系统会用模板帮你拆解纠结点。</div>
+  </section>
+
+  <section class="card" id="step-2" hidden>
+    <div class="field">
+      <label class="flabel" for="topic-title">标题（一句话说清你在纠结什么 / 想验证什么）</label>
+      <input type="text" id="topic-title" value="要不要裸辞去大理开民宿？" />
+    </div>
+    <div class="field">
+      <label class="flabel" for="topic-body">背景与约束</label>
+      <textarea id="topic-body">30 岁，存款约 40 万，大理有朋友愿意合租改造旧院；担心社保断缴与经营亏损，也怕错过现在这股冲动。</textarea>
+      <span class="fdesc">AI 会把它拆成"支持 / 反对 / 待验证"的初始论点树，你可以先看看再发布。</span>
+    </div>
+    <div class="field">
+      <span class="flabel">我目前的倾向</span>
+      <span class="seg" role="group" aria-label="倾向">
+        <button type="button" data-lean="pro" aria-pressed="false">倾向支持</button>
+        <button type="button" data-lean="neutral" aria-pressed="true">中立求验证</button>
+        <button type="button" data-lean="con" aria-pressed="false">倾向反对</button>
+      </span>
+    </div>
+    <div class="field">
+      <span class="flabel">标签（最多 3 个）</span>
+      <div class="chips" id="tag-chips" role="group" aria-label="标签">
+        <button type="button" data-tag="职业" aria-pressed="true">职业</button>
+        <button type="button" data-tag="生活方式" aria-pressed="true">生活方式</button>
+        <button type="button" data-tag="创业">创业</button>
+        <button type="button" data-tag="财务">财务</button>
+        <button type="button" data-tag="感情">感情</button>
+        <button type="button" data-tag="科技">科技</button>
+        <button type="button" data-tag="公共议题">公共议题</button>
+      </div>
+      <div class="hint-msg" id="tag-hint" hidden>最多选 3 个标签</div>
+    </div>
+    <button type="button" class="ghost" id="ev-toggle"><i data-lucide="plus" aria-hidden="true"></i> 添加第一条论据（可选）</button>
+    <div class="field" id="ev-field" hidden style="margin-top:12px">
+      <label class="flabel" for="first-ev">你最希望被检验的一条依据或担忧</label>
+      <textarea id="first-ev" placeholder="例：朋友的大理旧院已经营两年，转让价 20 万，我可以先入股试水半年"></textarea>
+    </div>
+  </section>
+
+  <section class="card" id="step-3" hidden>
+    <div class="switch-row">
+      <div class="info"><div class="t">立帖为证</div><div class="d">围观者可押注你的决定/观点走向，到期由现实自动揭晓。</div></div>
+      <button type="button" class="switch on" id="sw-stake" role="switch" aria-checked="true" aria-label="立帖为证"></button>
+    </div>
+    <div class="switch-row">
+      <div class="info"><div class="t">揭晓日期</div><div class="d">建议 1–3 个月，让结果有足够时间发生。</div></div>
+      <input type="date" id="reveal-date" value="2026-12-06" />
+    </div>
+    <div class="switch-row">
+      <div class="info"><div class="t">悬赏最佳反驳</div><div class="d">用逻辑币奖励"真正改变你想法"的那条论据。</div></div>
+      <button type="button" class="switch" id="sw-bounty" role="switch" aria-checked="false" aria-label="悬赏最佳反驳"></button>
+    </div>
+    <div class="switch-row">
+      <div class="info"><div class="t">允许陌生人反驳与补充盲区</div><div class="d">关闭后只有你邀请的人可以参与（默认开启）。</div></div>
+      <button type="button" class="switch on" id="sw-open" role="switch" aria-checked="true" aria-label="允许陌生人参与"></button>
+    </div>
+    <div class="switch-row">
+      <div class="info"><div class="t" id="close-mode-t">结束方式：由你采纳并出结论书</div><div class="d" id="close-mode-d">带未决风险关闭时需逐条公开声明，留待现实审计。</div></div>
+      <span class="chip" style="color:var(--ct-violet);background:var(--ct-violet-bg);font-size:12px;border-radius:999px;padding:2px 9px">个人决策</span>
+    </div>
+
+    <div class="summary" aria-label="发布预览">
+      <div class="row"><span class="k">类型</span><span id="sum-type">个人决策 · 公开围观</span></div>
+      <div class="row"><span class="k">标题</span><span id="sum-title">要不要裸辞去大理开民宿？</span></div>
+      <div class="row"><span class="k">倾向</span><span id="sum-lean">中立求验证</span></div>
+      <div class="row"><span class="k">规则</span><span id="sum-rules">立帖为证 · 2026-12-06 揭晓</span></div>
+    </div>
+    <p class="note">发布后即公开，发帖人与楼主不可自行删除，只可修订留痕；首次发布前需完成 5 分钟《理性讨论须知》。</p>
+  </section>
+
+  <div class="wizard-nav">
+    <button type="button" class="ghost" id="btn-prev" hidden>上一步</button>
+    <span class="spacer"></span>
+    <button type="button" class="primary" id="btn-next">下一步</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var step = 1;
+  var kind = "decision";
+  var lean = "neutral";
+  var stepEls = { 1: document.getElementById("step-1"), 2: document.getElementById("step-2"), 3: document.getElementById("step-3") };
+  var btnPrev = document.getElementById("btn-prev");
+  var btnNext = document.getElementById("btn-next");
+
+  function setStep(n) {
+    step = n;
+    Object.keys(stepEls).forEach(function (k) { stepEls[k].hidden = Number(k) !== n; });
+    btnPrev.hidden = n === 1;
+    btnNext.textContent = n === 3 ? "发布话题" : "下一步";
+    Array.prototype.forEach.call(document.querySelectorAll("#create-mockup .step-dot"), function (d) {
+      var s = Number(d.getAttribute("data-step"));
+      d.classList.toggle("active", s === n);
+      d.classList.toggle("done", s < n);
+    });
+    updateSummary();
+  }
+
+  function updateSummary() {
+    document.getElementById("sum-title").textContent = document.getElementById("topic-title").value || "（未填写标题）";
+    var leanMap = { pro: "倾向支持", neutral: "中立求验证", con: "倾向反对" };
+    document.getElementById("sum-lean").textContent = leanMap[lean];
+    var rules = [];
+    var swStake = document.getElementById("sw-stake").classList.contains("on");
+    if (swStake) rules.push("立帖为证 · " + document.getElementById("reveal-date").value + " 揭晓");
+    if (document.getElementById("sw-bounty").classList.contains("on")) rules.push("悬赏最佳反驳");
+    if (!rules.length) rules.push("无附加规则");
+    document.getElementById("sum-rules").textContent = rules.join(" · ");
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("#create-mockup .type-card"), function (b) {
+    b.addEventListener("click", function () {
+      kind = b.getAttribute("data-type");
+      Array.prototype.forEach.call(document.querySelectorAll("#create-mockup .type-card"), function (x) {
+        var on = x === b;
+        x.classList.toggle("active", on);
+        x.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      document.getElementById("type-note").textContent = kind === "decision"
+        ? "常见场景：要不要裸辞 / 要不要回老家 / 该不该分手 / 房子现在买还是再等等。系统会用模板帮你拆解纠结点。"
+        : "常见场景：AI 编程是否提高效率 / 华为与小米造车谁强 / 某政策是否利大于弊。请把主张写成可被检验的一句话。";
+      document.getElementById("close-mode-t").textContent = kind === "decision" ? "结束方式：由你采纳并出结论书" : "结束方式：社区收敛后由陪审确认";
+      document.getElementById("close-mode-d").textContent = kind === "decision"
+        ? "带未决风险关闭时需逐条公开声明，留待现实审计。"
+        : "收敛公示 7 天无新证据后进入暂定成立，陪审批量采纳有效分支。";
+      document.getElementById("sum-type").textContent = kind === "decision" ? "个人决策 · 公开围观" : "公共议题 · 公开验证";
+      updateSummary();
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("#create-mockup [data-lean]"), function (b) {
+    b.addEventListener("click", function () {
+      lean = b.getAttribute("data-lean");
+      Array.prototype.forEach.call(document.querySelectorAll("#create-mockup [data-lean]"), function (x) {
+        var on = x === b;
+        x.classList.toggle("active", on);
+        x.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      updateSummary();
+    });
+  });
+
+  var tagBtns = Array.prototype.slice.call(document.querySelectorAll("#create-mockup #tag-chips button"));
+  tagBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      var active = b.classList.contains("active");
+      var count = tagBtns.filter(function (x) { return x.classList.contains("active"); }).length;
+      if (active) { b.classList.remove("active"); b.setAttribute("aria-pressed", "false"); }
+      else if (count < 3) { b.classList.add("active"); b.setAttribute("aria-pressed", "true"); }
+      else { document.getElementById("tag-hint").hidden = false; setTimeout(function () { document.getElementById("tag-hint").hidden = true; }, 1600); }
+    });
+  });
+
+  document.getElementById("ev-toggle").addEventListener("click", function () {
+    document.getElementById("ev-field").hidden = false;
+    document.getElementById("ev-toggle").hidden = true;
+  });
+
+  function bindSwitch(id) {
+    var el = document.getElementById(id);
+    el.addEventListener("click", function () {
+      var on = !el.classList.contains("on");
+      el.classList.toggle("on", on);
+      el.setAttribute("aria-checked", on ? "true" : "false");
+      updateSummary();
+    });
+  }
+  bindSwitch("sw-stake");
+  bindSwitch("sw-bounty");
+  bindSwitch("sw-open");
+  document.getElementById("reveal-date").addEventListener("change", updateSummary);
+  document.getElementById("topic-title").addEventListener("input", updateSummary);
+
+  btnPrev.addEventListener("click", function () { if (step > 1) setStep(step - 1); });
+  btnNext.addEventListener("click", function () {
+    if (step < 3) setStep(step + 1);
+    else { btnNext.textContent = "已发布（示意）"; btnNext.disabled = true; }
+  });
+
+  setStep(1);
+})();
+</script>
+</div>

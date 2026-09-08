@@ -1,0 +1,405 @@
+<div id="duel-view-mockup">
+<style>
+  #duel-view-mockup {
+    color-scheme: light dark;
+    --dv-bg: light-dark(#f6f4ef, #161619);
+    --dv-surface: light-dark(#ffffff, #202024);
+    --dv-surface-2: light-dark(#f1eee7, #26262c);
+    --dv-ink: light-dark(#23211d, #eae7e0);
+    --dv-ink-2: light-dark(#6b675e, #a8a49b);
+    --dv-border: light-dark(#e3ded3, #34343a);
+    --dv-line: light-dark(#d9d4c9, #3d3d44);
+    --dv-pro: light-dark(#137a4b, #67c795);
+    --dv-pro-bg: light-dark(#e6f3eb, #0e2b1f);
+    --dv-con: light-dark(#c03a2b, #ef8a80);
+    --dv-con-bg: light-dark(#faece9, #331a16);
+    --dv-violet: light-dark(#5b4bce, #a99aef);
+    --dv-violet-bg: light-dark(#efeefa, #262046);
+    --dv-amber: light-dark(#a85d0a, #e8a65c);
+    --dv-amber-bg: light-dark(#fbf0dd, #35270f);
+    --dv-gray: light-dark(#77736a, #85817a);
+    --dv-gray-bg: light-dark(#eeece6, #2c2c31);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--dv-bg);
+    color: var(--dv-ink);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  #duel-view-mockup * { box-sizing: border-box; }
+  #duel-view-mockup button {
+    font: inherit;
+    border: 1px solid var(--dv-line);
+    background: var(--dv-surface);
+    color: var(--dv-ink);
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  #duel-view-mockup button.primary { background: var(--dv-violet); border-color: transparent; color: #ffffff; }
+  #duel-view-mockup button.ghost { background: transparent; }
+  #duel-view-mockup .appbar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 22px;
+    height: 54px;
+    border-bottom: 1px solid var(--dv-border);
+    background: var(--dv-surface);
+  }
+  #duel-view-mockup .brand { display: flex; align-items: center; gap: 7px; font-weight: 500; font-size: 16px; }
+  #duel-view-mockup .brand-mark {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: var(--dv-violet); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  #duel-view-mockup .nav { display: flex; gap: 2px; font-size: 14px; color: var(--dv-ink-2); }
+  #duel-view-mockup .nav .item { padding: 6px 11px; border-radius: 7px; }
+  #duel-view-mockup .nav .item.active { background: var(--dv-surface-2); color: var(--dv-ink); }
+  #duel-view-mockup .appbar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  #duel-view-mockup .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--dv-amber-bg); color: var(--dv-amber);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  #duel-view-mockup .topicbar {
+    max-width: 980px; margin: 0 auto;
+    padding: 14px 22px 0;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  #duel-view-mockup .topicbar .topic { font-size: 14.5px; font-weight: 500; flex: 1 1 260px; }
+  #duel-view-mockup .topicbar .views { display: inline-flex; border: 1px solid var(--dv-line); border-radius: 8px; overflow: hidden; }
+  #duel-view-mockup .topicbar .views button { border: 0; border-radius: 0; background: var(--dv-surface); font-size: 13px; padding: 5px 12px; }
+  #duel-view-mockup .topicbar .views button.active { background: var(--dv-surface-2); font-weight: 500; }
+  #duel-view-mockup .stage { max-width: 980px; margin: 0 auto; padding: 18px 22px 60px; }
+  #duel-view-mockup .crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 12.5px; color: var(--dv-ink-2); margin-bottom: 14px; }
+  #duel-view-mockup .crumbs button { border: 0; background: transparent; color: var(--dv-ink-2); font-size: 12.5px; padding: 2px 4px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #duel-view-mockup .crumbs button:hover { color: var(--dv-ink); }
+  #duel-view-mockup .crumbs .sep { opacity: 0.55; }
+  #duel-view-mockup .focus {
+    background: var(--dv-surface);
+    border: 1px solid var(--dv-border);
+    border-radius: 12px;
+    padding: 16px 18px 12px;
+    box-shadow: 0 1px 0 var(--dv-border);
+  }
+  #duel-view-mockup .focus .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #duel-view-mockup .role-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 500;
+    border-radius: 6px; padding: 2px 8px;
+  }
+  #duel-view-mockup .role-chip.pro { color: var(--dv-pro); background: var(--dv-pro-bg); }
+  #duel-view-mockup .role-chip.con { color: var(--dv-con); background: var(--dv-con-bg); }
+  #duel-view-mockup .role-chip.root { color: var(--dv-violet); background: var(--dv-violet-bg); }
+  #duel-view-mockup .state-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; padding: 2px 8px; border-radius: 999px;
+  }
+  #duel-view-mockup .state-chip.adopted { color: var(--dv-violet); background: var(--dv-violet-bg); }
+  #duel-view-mockup .state-chip.refuted { color: var(--dv-gray); background: var(--dv-gray-bg); }
+  #duel-view-mockup .state-chip.open { color: var(--dv-amber); background: var(--dv-amber-bg); }
+  #duel-view-mockup .focus .statement { margin: 12px 0 8px; font-size: 18px; font-weight: 500; line-height: 1.5; }
+  #duel-view-mockup .focus .meta { font-size: 13px; color: var(--dv-ink-2); }
+  #duel-view-mockup .focus .tags { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 6px; }
+  #duel-view-mockup .tag {
+    font-size: 12px; color: var(--dv-ink-2);
+    background: var(--dv-surface-2); border-radius: 6px; padding: 1px 8px;
+  }
+  #duel-view-mockup .focus .evidence { margin-top: 9px; font-size: 12.5px; color: var(--dv-ink-2); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #duel-view-mockup .focus .evidence .ev {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--dv-surface-2); border-radius: 6px; padding: 2px 8px;
+  }
+  #duel-view-mockup .focus .foot { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--dv-line); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #duel-view-mockup .focus .foot .note { font-size: 12.5px; color: var(--dv-amber); }
+  #duel-view-mockup .focus .foot .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  #duel-view-mockup .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+  #duel-view-mockup .col h3 { font-size: 13.5px; font-weight: 500; margin: 0 0 9px; display: flex; align-items: center; gap: 7px; }
+  #duel-view-mockup .col h3 .count { font-size: 12px; color: var(--dv-ink-2); }
+  #duel-view-mockup .col.pro h3 { color: var(--dv-pro); }
+  #duel-view-mockup .col.con h3 { color: var(--dv-con); }
+  #duel-view-mockup .child-list { display: flex; flex-direction: column; gap: 9px; }
+  #duel-view-mockup .child {
+    display: block; width: 100%; text-align: left;
+    background: var(--dv-surface);
+    border: 1px solid var(--dv-border);
+    border-radius: 10px;
+    padding: 11px 12px;
+  }
+  #duel-view-mockup .child.pro { border-left: 3px solid var(--dv-pro); }
+  #duel-view-mockup .child.con { border-left: 3px solid var(--dv-con); }
+  #duel-view-mockup .child .row { display: flex; gap: 8px; align-items: flex-start; }
+  #duel-view-mockup .child .text { flex: 1 1 auto; font-size: 14px; }
+  #duel-view-mockup .child .drill { color: var(--dv-ink-2); display: inline-flex; align-items: center; gap: 2px; font-size: 12px; white-space: nowrap; padding-top: 1px; }
+  #duel-view-mockup .child .meta { font-size: 12px; color: var(--dv-ink-2); margin-top: 5px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  #duel-view-mockup .mini-state { font-size: 11.5px; border-radius: 5px; padding: 0 6px; }
+  #duel-view-mockup .mini-state.adopted { color: var(--dv-violet); background: var(--dv-violet-bg); }
+  #duel-view-mockup .mini-state.refuted { color: var(--dv-gray); background: var(--dv-gray-bg); }
+  #duel-view-mockup .mini-state.open { color: var(--dv-amber); background: var(--dv-amber-bg); }
+  #duel-view-mockup .empty {
+    border: 1px dashed var(--dv-line); border-radius: 10px;
+    color: var(--dv-ink-2); font-size: 13px;
+    padding: 18px 12px; text-align: center;
+  }
+  #duel-view-mockup .composer {
+    margin-top: 18px; background: var(--dv-surface);
+    border: 1px solid var(--dv-border); border-radius: 12px; padding: 14px 16px;
+  }
+  #duel-view-mockup .composer .seg { display: inline-flex; border: 1px solid var(--dv-line); border-radius: 8px; overflow: hidden; }
+  #duel-view-mockup .composer .seg button { border: 0; border-radius: 0; background: var(--dv-surface); font-size: 13px; padding: 5px 13px; }
+  #duel-view-mockup .composer .seg button[aria-pressed="true"] { background: var(--dv-surface-2); font-weight: 500; }
+  #duel-view-mockup .composer textarea {
+    width: 100%; margin-top: 10px; min-height: 58px; resize: vertical;
+    font: inherit; color: var(--dv-ink);
+    background: var(--dv-bg);
+    border: 1px solid var(--dv-line); border-radius: 8px; padding: 9px 11px;
+  }
+  #duel-view-mockup .composer .hint { font-size: 12.5px; color: var(--dv-ink-2); margin-top: 7px; }
+  #duel-view-mockup .composer .bottom { margin-top: 9px; display: flex; align-items: center; gap: 10px; }
+  #duel-view-mockup .composer .live { font-size: 12.5px; color: var(--dv-con); flex: 1; }
+  #duel-view-mockup .legend { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--dv-ink-2); }
+  #duel-view-mockup .legend .li { display: inline-flex; align-items: center; gap: 5px; }
+  #duel-view-mockup .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  #duel-view-mockup .dot.pro { background: var(--dv-pro); }
+  #duel-view-mockup .dot.con { background: var(--dv-con); }
+  #duel-view-mockup .dot.adopted { background: var(--dv-violet); }
+  #duel-view-mockup .dot.refuted { background: var(--dv-gray); }
+  #duel-view-mockup .dot.open { background: var(--dv-amber); }
+  #duel-view-mockup i { width: 15px; height: 15px; }
+  @media (max-width: 800px) {
+    #duel-view-mockup .columns { grid-template-columns: minmax(0, 1fr); }
+    #duel-view-mockup .nav { display: none; }
+  }
+  @media (max-width: 560px) {
+    #duel-view-mockup .stage, #duel-view-mockup .topicbar { padding-left: 14px; padding-right: 14px; }
+    #duel-view-mockup .focus .statement { font-size: 16px; }
+  }
+</style>
+
+<header class="appbar">
+  <div class="brand"><span class="brand-mark"><i data-lucide="scale" aria-hidden="true"></i></span>灼见</div>
+  <nav class="nav" aria-label="主导航">
+    <span class="item active">广场</span>
+    <span class="item">我的战绩</span>
+  </nav>
+  <div class="right">
+    <button type="button" class="ghost" aria-label="通知"><i data-lucide="bell" aria-hidden="true"></i></button>
+    <span class="avatar">明</span>
+  </div>
+</header>
+
+<div class="topicbar">
+  <span class="topic">议题：要不要裸辞去大理开民宿？</span>
+  <span class="views" role="group" aria-label="视图切换">
+    <button type="button">结论书</button>
+    <button type="button" class="active" aria-pressed="true">对线</button>
+    <button type="button">论证地图</button>
+  </span>
+</div>
+
+<main class="stage">
+  <nav class="crumbs" id="crumbs" aria-label="论证路径"></nav>
+
+  <section class="focus" id="focus-card" aria-live="polite"></section>
+
+  <div class="columns">
+    <section class="col pro" aria-labelledby="pro-head">
+      <h3 id="pro-head">支持理由 <span class="count" id="pro-count"></span></h3>
+      <div class="child-list" id="pro-list"></div>
+    </section>
+    <section class="col con" aria-labelledby="con-head">
+      <h3 id="con-head">反驳 <span class="count" id="con-count"></span></h3>
+      <div class="child-list" id="con-list"></div>
+    </section>
+  </div>
+
+  <section class="composer" aria-label="回应输入">
+    <div class="seg" role="group" aria-label="回应类型">
+      <button type="button" id="mode-support" aria-pressed="false">支持这一点</button>
+      <button type="button" id="mode-rebut" aria-pressed="true">反驳这一点</button>
+    </div>
+    <textarea id="reply-input" placeholder="先写下对方观点的复述……"></textarea>
+    <div class="hint" id="reply-hint"></div>
+    <div class="bottom">
+      <button type="button" class="primary" id="submit-btn">提交</button>
+      <span class="live" id="live-note" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <div class="legend" aria-label="图例">
+    <span class="li"><span class="dot pro"></span>支持</span>
+    <span class="li"><span class="dot con"></span>反驳</span>
+    <span class="li"><span class="dot adopted"></span>已采纳</span>
+    <span class="li"><span class="dot refuted"></span>已击穿</span>
+    <span class="li"><span class="dot open"></span>未决 / 待补</span>
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var NODES = {
+    m1: { role: "root", side: "pro", text: "裸辞去大理开民宿，是实现自由生活的现实路径", author: "想飞的小明", score: 76, tags: ["#职业选择", "#可行性"], evidence: "事实论据 2 · 来源 1", state: "", stateText: "" },
+    p1: { role: "pro", side: "pro", text: "先租后买、分批投入，风险可控制在 20 万以内", author: "现金流玩家", score: 82, tags: ["#财务模型"], evidence: "事实论据 3 · 来源 2", state: "", stateText: "" },
+    p2: { role: "pro", side: "pro", text: "民宿经验可迁移：做不成还能转行运营与代运营", author: "前店主阿May", score: 88, tags: ["#退出路径"], evidence: "事实论据 1 · 来源 1", state: "", stateText: "" },
+    c1: { role: "con", side: "con", text: "民宿是生意不是生活——当爱好变成工作，自由感会消失", author: "前店主阿May", score: 88, tags: ["#创业真相"], evidence: "事实论据 3 · 来源 2（含店主访谈）", state: "adopted", stateText: "已采纳 · 影响结论" },
+    c2: { role: "con", side: "con", text: "新手开店亏损率约九成，转让周期中位数 14 个月", author: "民宿观察员", score: 79, tags: ["#行业数据"], evidence: "事实论据 4 · 来源 3", state: "adopted", stateText: "数据核验通过" },
+    cc1: { role: "con", side: "con", text: "只开 3 间房的微型民宿，亲自经营时间完全可控", author: "轻资产玩家", score: 74, tags: ["#运营模式"], evidence: "事实论据 2 · 来源 1", state: "refuted", stateText: "已击穿" },
+    cc2: { role: "con", side: "con", text: "避开景区选址，租金与人工成本还能再降三成", author: "大理本地人", score: 71, tags: ["#选址"], evidence: "无来源 · 待补", state: "open", stateText: "来源待补" },
+    cc3: { role: "con", side: "con", text: "亏损样本多为兼职或定位混乱的店，精品全职是另一条曲线", author: "民宿设计师", score: 80, tags: ["#样本偏差"], evidence: "事实论据 1 · 来源 1", state: "refuted", stateText: "已击穿" },
+    ccc1: { role: "con", side: "con", text: "微型民宿同样需要全职响应：旺季无休、差评与维修随叫随到", author: "前店主阿May", score: 88, tags: ["#真相"], evidence: "事实论据 2 · 来源 1", state: "adopted", stateText: "已采纳 · 击穿上一论点" },
+    ccc2: { role: "con", side: "con", text: "即便全职精品化，前 18 个月转让率仍超 60%", author: "民宿观察员", score: 79, tags: ["#行业数据"], evidence: "事实论据 1 · 来源 1", state: "open", stateText: "未回应 · 已挂红 5 天" }
+  };
+  var CHILDREN = {
+    m1: { pro: ["p1", "p2"], con: ["c1", "c2"] },
+    p1: { pro: [], con: [] },
+    p2: { pro: [], con: [] },
+    c1: { pro: [], con: ["cc1", "cc2"] },
+    c2: { pro: [], con: ["cc3"] },
+    cc1: { pro: [], con: ["ccc1"] },
+    cc2: { pro: [], con: [] },
+    cc3: { pro: [], con: ["ccc2"] },
+    ccc1: { pro: [], con: [] },
+    ccc2: { pro: [], con: [] }
+  };
+
+  var stack = ["m1"];
+  var replyMode = "con";
+  var focusCard = document.getElementById("focus-card");
+  var crumbsEl = document.getElementById("crumbs");
+  var proList = document.getElementById("pro-list");
+  var conList = document.getElementById("con-list");
+  var proCount = document.getElementById("pro-count");
+  var conCount = document.getElementById("con-count");
+  var replyHint = document.getElementById("reply-hint");
+  var liveNote = document.getElementById("live-note");
+  var replyInput = document.getElementById("reply-input");
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function roleLabel(node) {
+    if (node.role === "root") return "主论点";
+    return node.role === "pro" ? "支持方" : "反对方";
+  }
+
+  function stateChip(state, text) {
+    if (!state) return "";
+    return '<span class="state-chip ' + esc(state) + '">' + esc(text) + "</span>";
+  }
+
+  function render() {
+    var id = stack[stack.length - 1];
+    var node = NODES[id];
+    var roleClass = node.role === "root" ? "root" : node.role;
+
+    var crumbsHtml = '<button type="button" data-crumb="' + id + '">议题</button>';
+    if (stack.length > 1) {
+      crumbsHtml = '<button type="button" data-crumb="' + stack[0] + '">' + esc(NODES[stack[0]].text.slice(0, 12)) + "</button>";
+      for (var i = 1; i < stack.length; i++) {
+        crumbsHtml += '<span class="sep">/</span><button type="button" data-crumb="' + stack[i] + '">' + esc(NODES[stack[i]].text.slice(0, 12)) + "</button>";
+      }
+    }
+    crumbsEl.innerHTML = crumbsHtml;
+
+    var tagsHtml = "";
+    node.tags.forEach(function (t) { tagsHtml += '<span class="tag">' + esc(t) + "</span>"; });
+
+    focusCard.innerHTML =
+      '<div class="head">' +
+        '<span class="role-chip ' + esc(roleClass) + '">' + esc(roleLabel(node)) + "</span>" +
+        stateChip(node.state, node.stateText) +
+      "</div>" +
+      '<div class="statement">' + esc(node.text) + "</div>" +
+      '<div class="meta">' + esc(node.author) + ' · 判断力 ' + node.score + "</div>" +
+      '<div class="tags">' + tagsHtml + "</div>" +
+      '<div class="evidence"><span class="ev"><i data-lucide="file-text" aria-hidden="true"></i>' + esc(node.evidence) + "</span></div>" +
+      '<div class="foot">' +
+        (node.state === "open" ? '<span class="note">该论点处于未决状态：直接回应会改变其状态。</span>' : "") +
+        '<span class="actions">' +
+          '<button type="button" class="ghost" data-go="support">支持这一点</button>' +
+          '<button type="button" class="ghost" data-go="rebut">反驳这一点</button>' +
+          '<button type="button" class="ghost">标记跑题</button>' +
+        "</span>" +
+      "</div>";
+
+    function childCard(cid, rel) {
+      var c = NODES[cid];
+      var mini = c.state ? '<span class="mini-state ' + esc(c.state) + '">' + esc(c.stateText) + "</span>" : "";
+      return (
+        '<button type="button" class="child ' + esc(rel) + '" data-id="' + cid + '">' +
+          '<span class="row">' +
+            '<span class="text">' + esc(c.text) + "</span>" +
+            '<span class="drill"><i data-lucide="chevron-right" aria-hidden="true"></i>下钻</span>' +
+          "</span>" +
+          '<span class="meta">' + esc(c.author) + " · 判断力 " + c.score + mini + "</span>" +
+        "</button>"
+      );
+    }
+
+    var kids = CHILDREN[id] || { pro: [], con: [] };
+    proList.innerHTML = kids.pro.length ? kids.pro.map(function (k) { return childCard(k, "pro"); }).join("") : '<div class="empty">还没有支持理由，来写第一条</div>';
+    conList.innerHTML = kids.con.length ? kids.con.map(function (k) { return childCard(k, "con"); }).join("") : '<div class="empty">还没有反驳，来写第一条</div>';
+    proCount.textContent = "(" + kids.pro.length + ")";
+    conCount.textContent = "(" + kids.con.length + ")";
+
+    var crumbs = crumbsEl.querySelectorAll("button[data-crumb]");
+    Array.prototype.forEach.call(crumbs, function (b) {
+      b.addEventListener("click", function () {
+        var target = b.getAttribute("data-crumb");
+        var idx = stack.indexOf(target);
+        if (idx >= 0) { stack = stack.slice(0, idx + 1); render(); }
+      });
+    });
+
+    var drill = proList.querySelectorAll(".child[data-id]");
+    Array.prototype.forEach.call(drill, function (b) {
+      b.addEventListener("click", function () {
+        stack.push(b.getAttribute("data-id"));
+        render();
+      });
+    });
+
+    var replyBtns = focusCard.querySelectorAll("button[data-go]");
+    Array.prototype.forEach.call(replyBtns, function (b) {
+      b.addEventListener("click", function () {
+        setMode(b.getAttribute("data-go"));
+        replyInput.focus();
+      });
+    });
+
+    if (window.lucide && window.lucide.createIcons) {
+      try { lucide.createIcons({ attrs: { width: 15, height: 15 } }); } catch (e) {}
+    }
+  }
+
+  function setMode(m) {
+    replyMode = m;
+    document.getElementById("mode-support").setAttribute("aria-pressed", m === "pro");
+    document.getElementById("mode-rebut").setAttribute("aria-pressed", m === "con");
+    if (m === "pro") {
+      replyHint.textContent = "作为支持：一句话说清依据，尽量附事实来源；系统会自动检查是否与已有论点重复。";
+      replyInput.placeholder = "写下这条主张的支撑理由……";
+    } else {
+      replyHint.textContent = "作为反驳：先复述对方核心观点——通过 AI 复述检验后，才会解锁反驳输入框。";
+      replyInput.placeholder = "先写下对方观点的复述……";
+    }
+  }
+
+  document.getElementById("mode-support").addEventListener("click", function () { setMode("pro"); });
+  document.getElementById("mode-rebut").addEventListener("click", function () { setMode("con"); });
+  document.getElementById("submit-btn").addEventListener("click", function () {
+    if (replyMode === "con") {
+      liveNote.textContent = "复述检验未通过：请先准确复述对方的核心观点（示意）。";
+    } else {
+      liveNote.textContent = "已提交，等待查重与挂载检查（示意）。";
+    }
+  });
+
+  setMode("con");
+  render();
+})();
+</script>
+</div>

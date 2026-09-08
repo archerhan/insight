@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 灼见（debate）
 
-## Getting Started
+思想与立场的碰撞：让观点接受检验、让讨论沉淀结论、让"被说服"被记录。
 
-First, run the development server:
+## 技术栈
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js（App Router）+ TypeScript
+- TailwindCSS + shadcn/ui
+- PostgreSQL（宿主 Neon）+ Drizzle ORM
+- Vitest + React Testing Library（单元/组件测试）
+- GitHub Actions（CI）→ Vercel（部署）
+
+## 目录
+
+```text
+src/
+  app/              # 页面与 API（Vercel Cron 入口）
+  db/               # Drizzle schema / client / 种子数据 / 树服务
+  lib/domain/       # 纯领域函数：树、状态机、击穿传播、计时（带单测）
+design/             # HTML 界面示意稿
+docs/               # 产品与设计文档（含数据库设计 v0.2）
+drizzle/            # 生成的 SQL 迁移
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 本地开发
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm install
+cp .env.example .env.local   # 填入 Neon DATABASE_URL 与 CRON_SECRET
+pnpm db:generate             # 由 schema 生成迁移
+pnpm db:migrate              # 执行迁移
+pnpm db:seed                 # 写入演示话题
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+质量门禁（CI 与本地一致）：
 
-## Learn More
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test          # 覆盖率：pnpm test:coverage
+pnpm build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## M0 状态
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- 领域层：论点树祖先链/重挂、状态机迁移、击穿传播（悬空/moot/击杀链提升）、反驳计时 —— 已实现并有单测；
+- 服务层：话题创建、挂反驳（自动挂红）、回应、承认击穿（含自动传播）、提升到理由层 —— 事务内实现；
+- 数据库：Neon 迁移脚本可生成；种子脚本待真实数据库执行；
+- Cron：Vercel Cron 骨架（到期事件留痕，治理动作第二期接入）；
+- CI：GitHub Actions（lint / typecheck / test / build）。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+详细计划见 [第一期实现计划](docs/第一期实现计划.md)，页面示意稿在 `design/`。

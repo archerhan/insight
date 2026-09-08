@@ -1,0 +1,447 @@
+<div id="conclusion-book-mockup">
+<style>
+  #conclusion-book-mockup {
+    color-scheme: light dark;
+    --cb-bg: light-dark(#f6f4ef, #161619);
+    --cb-surface: light-dark(#ffffff, #202024);
+    --cb-surface-2: light-dark(#f1eee7, #26262c);
+    --cb-ink: light-dark(#23211d, #eae7e0);
+    --cb-ink-2: light-dark(#6b675e, #a8a49b);
+    --cb-border: light-dark(#e3ded3, #34343a);
+    --cb-pro: light-dark(#137a4b, #67c795);
+    --cb-pro-bg: light-dark(#e6f3eb, #0e2b1f);
+    --cb-con: light-dark(#c03a2b, #ef8a80);
+    --cb-con-bg: light-dark(#faece9, #331a16);
+    --cb-violet: light-dark(#5b4bce, #a99aef);
+    --cb-violet-bg: light-dark(#efeefa, #262046);
+    --cb-amber: light-dark(#a85d0a, #e8a65c);
+    --cb-amber-bg: light-dark(#fbf0dd, #35270f);
+    --cb-gray: light-dark(#77736a, #85817a);
+    --cb-gray-bg: light-dark(#eeece6, #2c2c31);
+    --cb-line: light-dark(#d9d4c9, #3d3d44);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--cb-bg);
+    color: var(--cb-ink);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  #conclusion-book-mockup * { box-sizing: border-box; }
+  #conclusion-book-mockup button {
+    font: inherit;
+    border: 1px solid var(--cb-line);
+    background: var(--cb-surface);
+    color: var(--cb-ink);
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  #conclusion-book-mockup button.primary {
+    background: var(--cb-violet);
+    border-color: transparent;
+    color: #ffffff;
+  }
+  #conclusion-book-mockup button.ghost { background: transparent; }
+  #conclusion-book-mockup .appbar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 22px;
+    height: 54px;
+    border-bottom: 1px solid var(--cb-border);
+    background: var(--cb-surface);
+  }
+  #conclusion-book-mockup .brand {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 500;
+    font-size: 16px;
+  }
+  #conclusion-book-mockup .brand-mark {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--cb-violet);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+  #conclusion-book-mockup .nav {
+    display: flex;
+    gap: 2px;
+    font-size: 14px;
+    color: var(--cb-ink-2);
+  }
+  #conclusion-book-mockup .nav .item { padding: 6px 11px; border-radius: 7px; }
+  #conclusion-book-mockup .nav .item.active { background: var(--cb-surface-2); color: var(--cb-ink); }
+  #conclusion-book-mockup .appbar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  #conclusion-book-mockup .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--cb-amber-bg);
+    color: var(--cb-amber);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  #conclusion-book-mockup .page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 26px 22px 70px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 292px;
+    gap: 26px;
+  }
+  #conclusion-book-mockup .breadcrumb { font-size: 12.5px; color: var(--cb-ink-2); margin-bottom: 14px; }
+  #conclusion-book-mockup h1 {
+    font-size: 25px;
+    font-weight: 500;
+    margin: 0 0 10px;
+    letter-spacing: 0.2px;
+  }
+  #conclusion-book-mockup .title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  #conclusion-book-mockup .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--cb-line);
+    color: var(--cb-ink-2);
+    background: var(--cb-surface);
+  }
+  #conclusion-book-mockup .chip .dot { width: 7px; height: 7px; border-radius: 50%; }
+  #conclusion-book-mockup .chip.violet { color: var(--cb-violet); border-color: transparent; background: var(--cb-violet-bg); }
+  #conclusion-book-mockup .chip.violet .dot { background: var(--cb-violet); }
+  #conclusion-book-mockup .chip.amber { color: var(--cb-amber); border-color: transparent; background: var(--cb-amber-bg); }
+  #conclusion-book-mockup .chip.amber .dot { background: var(--cb-amber); }
+  #conclusion-book-mockup .chip.neutral { background: var(--cb-surface); }
+  #conclusion-book-mockup .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  #conclusion-book-mockup .summary {
+    margin-top: 20px;
+    background: var(--cb-surface);
+    border: 1px solid var(--cb-border);
+    border-left: 3px solid var(--cb-violet);
+    border-radius: 10px;
+    padding: 16px 20px 14px;
+  }
+  #conclusion-book-mockup .summary .label {
+    font-size: 12.5px;
+    color: var(--cb-violet);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  #conclusion-book-mockup .summary .verdict { font-size: 17px; font-weight: 500; }
+  #conclusion-book-mockup .summary .basis { margin-top: 6px; color: var(--cb-ink-2); font-size: 14px; }
+  #conclusion-book-mockup .stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 18px 0 6px;
+    border: 1px solid var(--cb-border);
+    border-radius: 10px;
+    background: var(--cb-surface);
+  }
+  #conclusion-book-mockup .stats .cell { padding: 11px 8px 10px 16px; }
+  #conclusion-book-mockup .stats .cell + .cell { border-left: 1px solid var(--cb-border); }
+  #conclusion-book-mockup .stats .num { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  #conclusion-book-mockup .stats .name { font-size: 12.5px; color: var(--cb-ink-2); }
+  #conclusion-book-mockup .section { margin-top: 30px; }
+  #conclusion-book-mockup h2 {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  #conclusion-book-mockup h2 .hint { font-size: 12.5px; color: var(--cb-ink-2); font-weight: 400; }
+  #conclusion-book-mockup .dispute-head {
+    display: flex;
+    align-items: center;
+    margin: 18px 0 8px;
+  }
+  #conclusion-book-mockup .dispute-head .t { font-size: 13.5px; font-weight: 500; }
+  #conclusion-book-mockup .dispute-head .note { margin-left: auto; font-size: 12.5px; color: var(--cb-ink-2); }
+  #conclusion-book-mockup .pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  #conclusion-book-mockup .claim {
+    position: relative;
+    background: var(--cb-surface);
+    border: 1px solid var(--cb-border);
+    border-radius: 10px;
+    padding: 13px 15px 11px;
+  }
+  #conclusion-book-mockup .claim .side {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    padding: 2px 8px;
+  }
+  #conclusion-book-mockup .claim .side.pro { color: var(--cb-pro); background: var(--cb-pro-bg); }
+  #conclusion-book-mockup .claim .side.con { color: var(--cb-con); background: var(--cb-con-bg); }
+  #conclusion-book-mockup .claim .verdict-chip {
+    float: right;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  #conclusion-book-mockup .claim .verdict-chip.adopted { color: var(--cb-violet); background: var(--cb-violet-bg); }
+  #conclusion-book-mockup .claim .verdict-chip.refuted { color: var(--cb-gray); background: var(--cb-gray-bg); }
+  #conclusion-book-mockup .claim .verdict-chip.pending { color: var(--cb-amber); background: var(--cb-amber-bg); }
+  #conclusion-book-mockup .claim .statement { margin: 9px 0 7px; font-size: 15px; }
+  #conclusion-book-mockup .claim .meta { font-size: 12.5px; color: var(--cb-ink-2); }
+  #conclusion-book-mockup .claim .meta .tag { margin-left: 4px; }
+  #conclusion-book-mockup .claim .foot { margin-top: 9px; padding-top: 8px; border-top: 1px dashed var(--cb-line); font-size: 12.5px; color: var(--cb-ink-2); }
+  #conclusion-book-mockup .claim .evidence {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: var(--cb-ink-2);
+    background: var(--cb-surface-2);
+    border-radius: 6px;
+    padding: 2px 8px;
+  }
+  #conclusion-book-mockup .open-panel {
+    margin-top: 14px;
+    border: 1px solid var(--cb-border);
+    border-left: 3px solid var(--cb-con);
+    border-radius: 10px;
+    background: var(--cb-con-bg);
+    padding: 14px 18px;
+  }
+  #conclusion-book-mockup .open-panel .head { display: flex; align-items: center; gap: 7px; color: var(--cb-con); font-size: 13.5px; font-weight: 500; }
+  #conclusion-book-mockup .open-panel .row { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+  #conclusion-book-mockup .open-panel .st { flex: 1 1 380px; }
+  #conclusion-book-mockup .open-panel .meta { font-size: 12.5px; color: var(--cb-ink-2); margin-top: 4px; }
+  #conclusion-book-mockup .countdown {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--cb-con);
+    border: 1px solid var(--cb-con);
+    border-radius: 999px;
+    padding: 3px 10px;
+    white-space: nowrap;
+  }
+  #conclusion-book-mockup .map-entry {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    background: var(--cb-surface);
+    border: 1px solid var(--cb-border);
+    border-radius: 10px;
+    padding: 13px 16px;
+  }
+  #conclusion-book-mockup .map-entry .desc { flex: 1 1 300px; font-size: 13.5px; color: var(--cb-ink-2); }
+  #conclusion-book-mockup .map-entry .desc strong { color: var(--cb-ink); font-weight: 500; }
+  #conclusion-book-mockup .disclaimer { margin-top: 22px; font-size: 12.5px; color: var(--cb-ink-2); }
+  #conclusion-book-mockup aside { display: flex; flex-direction: column; gap: 14px; }
+  #conclusion-book-mockup .rail-card {
+    background: var(--cb-surface);
+    border: 1px solid var(--cb-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  #conclusion-book-mockup .rail-card h3 { margin: 0 0 10px; font-size: 13px; font-weight: 500; color: var(--cb-ink-2); }
+  #conclusion-book-mockup .kv { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; padding: 4px 0; }
+  #conclusion-book-mockup .kv .k { color: var(--cb-ink-2); }
+  #conclusion-book-mockup .person { display: flex; align-items: center; gap: 10px; }
+  #conclusion-book-mockup .person .big-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--cb-violet-bg); color: var(--cb-violet); display: inline-flex; align-items: center; justify-content: center; }
+  #conclusion-book-mockup .person .name { font-size: 14px; }
+  #conclusion-book-mockup .person .score { font-size: 12.5px; color: var(--cb-violet); }
+  #conclusion-book-mockup .list-item { font-size: 13.5px; padding: 7px 0; border-bottom: 1px dashed var(--cb-line); }
+  #conclusion-book-mockup .list-item:last-child { border-bottom: 0; }
+  #conclusion-book-mockup .list-item .src { font-size: 12px; color: var(--cb-ink-2); margin-top: 2px; }
+  #conclusion-book-mockup .stake-note { font-size: 12.5px; color: var(--cb-ink-2); margin-top: 6px; }
+  #conclusion-book-mockup i { width: 15px; height: 15px; }
+  @media (max-width: 920px) {
+    #conclusion-book-mockup .page { grid-template-columns: minmax(0, 1fr); }
+    #conclusion-book-mockup aside { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+    #conclusion-book-mockup .nav { display: none; }
+  }
+  @media (max-width: 680px) {
+    #conclusion-book-mockup .page { padding: 18px 14px 50px; }
+    #conclusion-book-mockup h1 { font-size: 21px; }
+    #conclusion-book-mockup .pair { grid-template-columns: minmax(0, 1fr); }
+    #conclusion-book-mockup .stats { grid-template-columns: 1fr 1fr; }
+    #conclusion-book-mockup .stats .cell:nth-child(3) { border-left: 0; }
+    #conclusion-book-mockup .stats .cell { border-bottom: 1px solid var(--cb-border); }
+    #conclusion-book-mockup aside { display: flex; }
+    #conclusion-book-mockup .actions { margin-left: 0; width: 100%; }
+  }
+</style>
+
+<header class="appbar">
+  <div class="brand"><span class="brand-mark"><i data-lucide="scale" aria-hidden="true"></i></span>灼见</div>
+  <nav class="nav" aria-label="主导航">
+    <span class="item active">广场</span>
+    <span class="item">我的战绩</span>
+  </nav>
+  <div class="right">
+    <button type="button" class="ghost" aria-label="通知"><i data-lucide="bell" aria-hidden="true"></i></button>
+    <span class="avatar">明</span>
+  </div>
+</header>
+
+<main class="page">
+  <div>
+    <div class="breadcrumb">广场 / 人生决策 / 职业转变 / 当前话题</div>
+
+    <h1>要不要裸辞去大理开民宿？</h1>
+    <div class="title-row">
+      <span class="chip violet"><span class="dot"></span>已收敛 · 暂定结论</span>
+      <span class="chip neutral">第 3 版 · 更新于 08-30</span>
+      <span class="chip amber"><span class="dot"></span>未决反驳 1 条</span>
+      <div class="actions">
+        <button type="button" class="ghost"><i data-lucide="bell" aria-hidden="true"></i> 订阅修订</button>
+        <button type="button" class="ghost"><i data-lucide="share-2" aria-hidden="true"></i> 分享</button>
+        <button type="button" class="primary"><i data-lucide="download" aria-hidden="true"></i> 导出结论书</button>
+      </div>
+    </div>
+
+    <section class="summary" aria-label="结论摘要">
+      <div class="label">结 论（暂定）</div>
+      <div class="verdict">不建议直接裸辞。建议先请年假或利用离职缓冲期，到大理试住 3–4 周、完成牌照与成本调研，再决定是否投入。</div>
+      <div class="basis">关键依据：「试住验证」已被采纳为最终路径；「逃离内卷」与「民宿是生意不是生活」相互制衡后，风险侧占优。</div>
+    </section>
+
+    <div class="stats" aria-label="话题统计">
+      <div class="cell"><div class="num">42</div><div class="name">论点</div></div>
+      <div class="cell"><div class="num">7</div><div class="name">已采纳</div></div>
+      <div class="cell"><div class="num">1</div><div class="name">未决反驳</div></div>
+      <div class="cell"><div class="num">2</div><div class="name">已受现实检验</div></div>
+    </div>
+
+    <section class="section" aria-labelledby="disputes-h">
+      <h2 id="disputes-h">关键分歧 <span class="hint">决定结论走向的直接对抗</span></h2>
+
+      <div class="dispute-head"><span class="t">分歧 1 · 生活方式之争</span><span class="note">反方占优 · 已收束</span></div>
+      <div class="pair">
+        <article class="claim">
+          <span class="side pro">支持方</span><span class="verdict-chip refuted">已击穿</span>
+          <div class="statement">逃离内卷，在大理把日子过成生活</div>
+          <div class="meta">@想飞的小明 · 判断力 76<span class="tag">#职业选择</span><span class="tag">#生活方式</span></div>
+          <div class="evidence"><i data-lucide="file-text" aria-hidden="true"></i>事实论据 2 · 来源 1</div>
+          <div class="foot">08-21 被 @阿May 的反驳击穿，已标记为不成立</div>
+        </article>
+        <article class="claim">
+          <span class="side con">反对方</span><span class="verdict-chip adopted">已采纳</span>
+          <div class="statement">民宿是生意不是生活——当爱好变成工作，自由感会消失</div>
+          <div class="meta">@阿May · 判断力 88<span class="tag">#创业真相</span></div>
+          <div class="evidence"><i data-lucide="file-text" aria-hidden="true"></i>事实论据 3 · 来源 2（含 1 位店主访谈）</div>
+          <div class="foot">08-21 被采纳进结论书</div>
+        </article>
+      </div>
+
+      <div class="dispute-head"><span class="t">分歧 2 · 风险验证</span><span class="note">双方论点并存 · 已收敛</span></div>
+      <div class="pair">
+        <article class="claim">
+          <span class="side con">反对方</span><span class="verdict-chip adopted">已采纳</span>
+          <div class="statement">新手开店亏损率约九成，转让周期中位数 14 个月</div>
+          <div class="meta">@民宿观察员 · 判断力 79<span class="tag">#行业数据</span></div>
+          <div class="evidence"><i data-lucide="file-text" aria-hidden="true"></i>事实论据 4 · 来源 3（公开报告 / 转让平台）</div>
+          <div class="foot">08-18 数据核验通过，被采纳为风险依据</div>
+        </article>
+        <article class="claim">
+          <span class="side pro">支持方</span><span class="verdict-chip adopted">已采纳</span>
+          <div class="statement">先用年假试住 3–4 周、完成实地调研，再决定是否辞职</div>
+          <div class="meta">@老张 · 判断力 91<span class="tag">#可执行方案</span></div>
+          <div class="evidence"><i data-lucide="file-text" aria-hidden="true"></i>事实论据 3 · 来源 2</div>
+          <div class="foot">08-30 被采纳为最终路径（第 3 版修订）</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-label="未决反驳">
+      <div class="open-panel">
+        <div class="head"><i data-lucide="alert-circle" aria-hidden="true"></i>未决反驳 · 直接影响结论「试住验证成本可控」</div>
+        <div class="row">
+          <div class="st">
+            <div>大理民宿的牌照与消防审查，实际拿证周期常超过 6 个月</div>
+            <div class="meta">@证照老手 · 判断力 84 · 已挂红 12 天，尚无有效回应</div>
+          </div>
+          <span class="countdown"><i data-lucide="clock" aria-hidden="true"></i>距默认判负程序 2 天</span>
+          <button type="button">去回应</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-label="论证过程">
+      <div class="map-entry">
+        <div class="desc"><strong>完整论证地图：</strong>42 个论点 · 7 条已采纳 · 1 条未决 · 全部留痕可回溯</div>
+        <button type="button"><i data-lucide="map" aria-hidden="true"></i> 查看论证地图</button>
+        <button type="button"><i data-lucide="history" aria-hidden="true"></i> 修订历史</button>
+      </div>
+      <p class="disclaimer">本结论书为暂定版本：新证据可发起修订，被现实验证后自动更新。所有结论均可回溯到具体论点与裁决记录。</p>
+    </section>
+  </div>
+
+  <aside>
+    <div class="rail-card">
+      <h3>话题信息</h3>
+      <div class="kv"><span class="k">类型</span><span>个人决策 · 楼主可关闭</span></div>
+      <div class="kv"><span class="k">参与者</span><span>38 人 · 12 人立帖为证</span></div>
+      <div class="kv"><span class="k">发起</span><span>08-12 · 已进行 26 天</span></div>
+      <div class="person" style="margin-top:8px">
+        <span class="big-avatar">明</span>
+        <span>
+          <div class="name">想飞的小明</div>
+          <div class="score">决策战绩 76 · 诚实 1 次</div>
+        </span>
+      </div>
+    </div>
+
+    <div class="rail-card">
+      <h3>立帖为证</h3>
+      <div class="kv"><span class="k">揭晓日</span><span>2026-11-01</span></div>
+      <div class="kv"><span class="k">倒计时</span><span>55 天</span></div>
+      <div class="stake-note">揭晓后由现实自动裁决，结论书将更新「已受现实检验」标记。</div>
+    </div>
+
+    <div class="rail-card">
+      <h3>结论书依据（采纳 7 条 · 前 3）</h3>
+      <div class="list-item">先用年假试住 3–4 周，再决定是否辞职
+        <div class="src">采纳自 @老张 · 08-30</div>
+      </div>
+      <div class="list-item">民宿是生意不是生活，爱好变工作会失去自由感
+        <div class="src">采纳自 @阿May · 08-21</div>
+      </div>
+      <div class="list-item">新手开店亏损率约九成
+        <div class="src">数据核验通过 · 08-18</div>
+      </div>
+    </div>
+
+    <div class="rail-card">
+      <h3>修订历史</h3>
+      <div class="list-item">v3 · 08-30 · 采纳「试住验证」路径
+        <div class="src">由 1 条未决反驳触发重审</div>
+      </div>
+      <div class="list-item">v2 · 08-21 · 击穿「逃离内卷」
+        <div class="src">@阿May 反驳被采纳</div>
+      </div>
+      <div class="list-item">v1 · 08-12 · 话题创建
+        <div class="src">初始结论：倾向支持</div>
+      </div>
+    </div>
+  </aside>
+</main>
+</div>
