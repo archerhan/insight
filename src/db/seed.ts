@@ -2,10 +2,12 @@
  * M0 种子数据：按"理由层口径"插入演示话题。
  * 运行：pnpm db:seed（需要 DATABASE_URL，先执行迁移）。
  */
-import 'dotenv/config';
 import { eq } from 'drizzle-orm';
+import { config } from 'dotenv';
 import { db } from './client';
 import { claimEvents, claims, evidence, topics, users } from './schema';
+
+config({ path: ['.env.local', '.env'] });
 
 async function main() {
   const [demoUser] = await db
