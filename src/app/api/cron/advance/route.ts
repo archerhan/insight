@@ -7,7 +7,11 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * Vercel Cron 入口（vercel.json 每 30 分钟触发）。
+ * Vercel Cron 入口。Hobby 计划仅支持每日一次（vercel.json 03:00 UTC）。
+ * 计时粒度的保障不依赖高频调度：
+ * 1) 计时阈值是 3/7/14 天，每日扫描 + 读取时兜底足够；
+ * 2) 读取路径（M1/M3 实现）会做"过期即迁移"的惰性推进；
+ * 3) 需要更高频率时改用 GitHub Actions 定时或升级 Pro。
  * M0 骨架：只扫描到期 challenge 并写 challenge_timer 事件；
  * 真正的默认判负/惩罚等治理动作等陪审体系（第二期）接入。
  */
