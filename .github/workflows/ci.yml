@@ -25,6 +25,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/debate_test
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/debate_test
+      # 页面用 cookies() 保持动态渲染，构建不调用 OAuth；占位密钥仅供模块加载安全
+      AUTH_SECRET: ci-only-secret
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

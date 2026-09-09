@@ -6,6 +6,10 @@ vi.mock('next/font/google', () => ({
   Geist_Mono: () => ({ className: '', variable: '--font-mono' }),
 }));
 
+vi.mock('@/components/app-header', () => ({
+  AppHeader: () => null,
+}));
+
 import RootLayout, { metadata } from './layout';
 
 describe('全局布局', () => {

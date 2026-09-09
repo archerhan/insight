@@ -27,6 +27,9 @@ drizzle/            # 生成的 SQL 迁移
 ```bash
 pnpm install
 cp .env.example .env.local   # 填入 Neon DATABASE_URL 与 CRON_SECRET
+openssl rand -base64 32      # 结果填入 .env.local 的 AUTH_SECRET
+# 另需 GitHub OAuth：https://github.com/settings/developers → OAuth Apps
+# 回调地址：http://localhost:3000/api/auth/callback/github
 pnpm db:generate             # 由 schema 生成迁移
 pnpm db:migrate              # 执行迁移
 pnpm db:seed                 # 写入两棵演示树（幂等，可重复执行）
@@ -56,5 +59,25 @@ pnpm build
 - 覆盖率门槛：核心状态机与树操作分支 ≥85%，全仓（执行代码）行 ≥70%；
 - UI 骨架：shadcn/ui（base-nova 风格）已初始化，占位首页/布局就位；
 - CI：GitHub Actions（lint / typecheck / test / coverage / build），main 与 PR 全绿才可合并。
+
+## M1 状态（已达成）
+
+- 认证：NextAuth（GitHub OAuth），首次登录即按 `auth_id` 创建 users 档案（`github:{id}`）；假名默认取 GitHub 名、头像随登录同步；
+- 门槛：《理性讨论须知》占位页（六条讨论规则，约 5 分钟）完成即写 `course_completed_at`；`/topics/new` 未完成会自动转到须知页，领域层 `hasCompletedCourse / publishGateError` 供 M2 发布动作复用；
+- 全局壳：顶栏 = 灼见品牌 + 导航（广场 / 我的战绩）+“发起话题”CTA + 登录/退出；议题页三视图切换组件（结论书 / 对线 / 论证地图，`?tab=` 深链）已就绪，M3 议题页接入；
+- 路由占位：`/login`、`/guide`、`/me`（我的战绩）、`/topics/new`（发起话题向导骨架）；
+- 设计 token：按《视觉呈现设计》落地暖纸底 / 紫品牌 / 语义色（pro/con/amber 等），浅深色各一套；
+- 测试：Auth 建档回调、须知门槛、登录/守卫、顶栏与三视图组件、页面占位均有用例；users 服务集成测试在 CI 测试库自动运行。
+
+### M1 环境变量（.env.local）
+
+```bash
+AUTH_SECRET=...            # openssl rand -base64 32
+AUTH_URL=http://localhost:3000
+AUTH_GITHUB_ID=...         # GitHub OAuth App Client ID
+AUTH_GITHUB_SECRET=...     # GitHub OAuth App Client Secret
+```
+
+认证回调地址固定为 `{AUTH_URL}/api/auth/callback/github`；Vercel 部署时把 `AUTH_URL` 换成正式域名，并在 GitHub OAuth App 中登记该回调。
 
 详细计划见 [第一期实现计划](docs/第一期实现计划.md)，页面示意稿在 `design/`。
