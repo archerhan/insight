@@ -19,6 +19,8 @@ export interface CascadeUpdate {
   status: CascadeStatus;
   parentId?: string | null;
   ancestors?: string[];
+  /** 理由层节点（parent 置 NULL）必须携带 root relation。 */
+  relation?: CascadeNode['relation'];
 }
 
 export interface CascadeEvent {
@@ -39,10 +41,10 @@ function statusForInvalidatedParent(relation: CascadeNode['relation']): Invalida
   return relation === 'pro' ? 'orphaned' : 'moot';
 }
 
+/** 把击杀链子树整体重挂到理由层（parent 置 NULL、祖先链清空）。 */
 function rebaseSubtree(
   nodes: CascadeNode[],
   rootId: string,
-  newParent: { id: string; ancestors: string[] } | null,
 ): { claimId: string; parentId: string | null; ancestors: string[] }[] {
   const childrenByParent = new Map<string | null, CascadeNode[]>();
   for (const node of nodes) {
@@ -50,10 +52,9 @@ function rebaseSubtree(
     list.push(node);
     childrenByParent.set(node.parentId, list);
   }
-  const rootAncestors = newParent ? [...newParent.ancestors, newParent.id] : [];
   const rebased: { claimId: string; parentId: string | null; ancestors: string[] }[] = [];
   const queue: Array<{ id: string; parentId: string | null; ancestors: string[] }> = [
-    { id: rootId, parentId: newParent ? newParent.id : null, ancestors: rootAncestors },
+    { id: rootId, parentId: null, ancestors: [] },
   ];
   while (queue.length > 0) {
     const current = queue.shift();
@@ -79,9 +80,10 @@ export function planRefutationCascade(
 ): CascadePlan {
   const target = nodes.find((node) => node.id === refutedId);
   if (!target) throw new Error(`Unknown claim ${refutedId}`);
+  let killerNode: CascadeNode | undefined;
   if (killerId) {
-    const killer = nodes.find((node) => node.id === killerId);
-    if (!killer || killer.parentId !== refutedId || killer.relation !== 'con') {
+    killerNode = nodes.find((node) => node.id === killerId);
+    if (!killerNode || killerNode.parentId !== refutedId || killerNode.relation !== 'con') {
       throw new Error('killerId 必须是 refuted 的直接 con 子节点');
     }
   }
@@ -108,26 +110,25 @@ export function planRefutationCascade(
     }
   }
 
-  if (killerId) {
-    const killer = nodes.find((node) => node.id === killerId);
-    if (!killer) throw new Error(`Unknown killer ${killerId}`);
-    updates.push({ claimId: killerId, status: 'active', parentId: null, ancestors: [] });
-    events.push({ claimId: killerId, type: 'promoted' });
+  if (killerNode) {
+    updates.push({
+      claimId: killerNode.id,
+      status: 'active',
+      parentId: null,
+      ancestors: [],
+      relation: 'root',
+    });
+    events.push({ claimId: killerNode.id, type: 'promoted' });
     // killer 原父已失效，killer 子树整体重挂到理由层
-    for (const rebase of rebaseSubtree(nodes, killerId, null)) {
-      if (rebase.claimId === killerId) continue;
-      const existing = updates.find((update) => update.claimId === rebase.claimId);
-      if (existing) {
-        existing.parentId = rebase.parentId;
-        existing.ancestors = rebase.ancestors;
-      } else {
-        updates.push({
-          claimId: rebase.claimId,
-          status: 'active',
-          parentId: rebase.parentId,
-          ancestors: rebase.ancestors,
-        });
-      }
+    for (const rebase of rebaseSubtree(nodes, killerNode.id)) {
+      if (rebase.claimId === killerNode.id) continue;
+      // killer 子树与被击穿节点的其他后代互斥（树形数据保证），不会重复入列
+      updates.push({
+        claimId: rebase.claimId,
+        status: 'active',
+        parentId: rebase.parentId,
+        ancestors: rebase.ancestors,
+      });
     }
   }
 

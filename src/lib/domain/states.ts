@@ -40,9 +40,9 @@ export type ChallengeStatus = (typeof CHALLENGE_STATUSES)[number];
 export const CLAIM_TRANSITIONS: Record<ClaimStatus, ClaimStatus[]> = {
   pending: ['active', 'collapsed'],
   active: ['challenged', 'refuted', 'merged', 'collapsed', 'adjudicated', 'superseded'],
-  challenged: ['responded', 'disputed', 'refuted', 'orphaned', 'moot', 'collapsed'],
+  challenged: ['responded', 'disputed', 'refuted', 'orphaned', 'moot', 'collapsed', 'superseded'],
   disputed: ['active', 'refuted', 'collapsed', 'merged'],
-  responded: ['challenged', 'refuted', 'merged', 'collapsed'],
+  responded: ['challenged', 'refuted', 'merged', 'collapsed', 'superseded'],
   refuted: ['superseded', 'collapsed', 'adjudicated'],
   orphaned: ['active', 'refuted', 'collapsed', 'merged'],
   moot: ['collapsed'],

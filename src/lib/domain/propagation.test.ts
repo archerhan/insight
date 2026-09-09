@@ -22,7 +22,12 @@ describe('planRefutationCascade', () => {
     expect(byId('x1')?.status).toBe('moot');
     expect(byId('c2')?.status).toBe('moot');
 
-    expect(byId('c1')).toMatchObject({ status: 'active', parentId: null, ancestors: [] });
+    expect(byId('c1')).toMatchObject({
+      status: 'active',
+      parentId: null,
+      ancestors: [],
+      relation: 'root',
+    });
     expect(byId('k1')).toMatchObject({ status: 'active', parentId: 'c1', ancestors: ['c1'] });
 
     expect(plan.events.find((e) => e.claimId === 'c1')?.type).toBe('promoted');

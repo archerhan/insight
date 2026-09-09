@@ -37,10 +37,14 @@ async function insertClaimInTx(
   if (shapeError) throw new Error(shapeError);
 
   let ancestors: string[] = [];
-  let depth = 0;
   if (input.parentId !== null) {
     const parentRows = await tx
-      .select({ parentId: claims.parentId, ancestors: claims.ancestors, status: claims.status, topicId: claims.topicId })
+      .select({
+        parentId: claims.parentId,
+        ancestors: claims.ancestors,
+        status: claims.status,
+        topicId: claims.topicId,
+      })
       .from(claims)
       .where(eq(claims.id, input.parentId))
       .limit(1);
@@ -52,8 +56,9 @@ async function insertClaimInTx(
     }
     const parentLike: ClaimLike = { id: input.parentId, parentId: null, ancestors: parent.ancestors };
     ancestors = childAncestors(parentLike);
-    depth = 0 + 1; // depth 由应用层约束，正式版可存列；M0 用子级深度 1
   }
+  // 树不变量：depth === ancestors.length（理由层为 0）
+  const depth = ancestors.length;
 
   const [claim] = await tx
     .insert(claims)
@@ -109,11 +114,24 @@ async function writeCascadeInTx(
   const plan = planRefutationCascade(nodes, refutedClaimId, killerClaimId);
 
   for (const update of plan.updates) {
-    const setFields: { status: string; parentId?: string | null; ancestors?: string[] } = {
+    const setFields: {
+      status: string;
+      parentId?: string | null;
+      ancestors?: string[];
+      depth?: number;
+      relation?: string;
+    } = {
       status: update.status,
     };
-    if (update.parentId !== undefined) setFields.parentId = update.parentId;
-    if (update.ancestors !== undefined) setFields.ancestors = update.ancestors;
+    if (update.parentId !== undefined) {
+      setFields.parentId = update.parentId;
+      if (update.parentId === null) setFields.relation = 'root';
+    }
+    if (update.ancestors !== undefined) {
+      setFields.ancestors = update.ancestors;
+      setFields.depth = update.ancestors.length;
+    }
+    if (update.relation !== undefined) setFields.relation = update.relation;
     await tx.update(claims).set(setFields).where(eq(claims.id, update.claimId));
   }
   for (const event of plan.events) {
@@ -277,20 +295,14 @@ export async function respondToChallenge(input: {
       throw new Error('Only the target claim author can respond');
     }
 
-    const [response] = await tx
-      .insert(claims)
-      .values({
-        topicId: challenge.topicId,
-        parentId: challenge.challengerClaimId,
-        relation: 'con',
-        contentTitle: input.contentTitle,
-        contentBody: input.contentBody,
-        authorId: input.authorId,
-        status: 'active',
-        depth: 1,
-        ancestors: [],
-      })
-      .returning();
+    const response = await insertClaimInTx(tx, {
+      topicId: challenge.topicId,
+      parentId: challenge.challengerClaimId,
+      relation: 'con',
+      contentTitle: input.contentTitle,
+      contentBody: input.contentBody,
+      authorId: input.authorId,
+    });
 
     await tx
       .update(challenges)
@@ -349,7 +361,13 @@ export async function concedeToChallenge(input: { challengeId: string; actorId: 
   });
 }
 
-export async function promoteClaimToReasonLayer(input: { claimId: string; actorId: string }) {
+export async function migrateClaim(input: {
+  claimId: string;
+  actorId: string;
+  /** null = 提升到理由层；否则把该节点（及整棵子树）迁移到新父节点下。 */
+  newParentId: string | null;
+  reason?: string;
+}) {
   return db.transaction(async (tx) => {
     const claimRows = await tx
       .select({
@@ -364,8 +382,30 @@ export async function promoteClaimToReasonLayer(input: { claimId: string; actorI
       .where(eq(claims.id, input.claimId))
       .limit(1);
     const claim = claimRows[0];
-    if (!claim) throw new Error('Unknown claim');
-    if (claim.parentId === null) throw new Error('Claim is already in reason layer');
+    if (!claim) throw new Error(`Unknown claim ${input.claimId}`);
+    if (claim.parentId === input.newParentId) {
+      throw new Error('Claim is already under the target parent');
+    }
+    if (claim.parentId === null && input.newParentId !== null) {
+      throw new Error('Reason-layer claims cannot be migrated under another claim');
+    }
+    if (!['active', 'orphaned'].includes(claim.status)) {
+      throw new Error(`Claim status ${claim.status} cannot be migrated`);
+    }
+
+    if (input.newParentId !== null) {
+      const parentRows = await tx
+        .select({ id: claims.id, topicId: claims.topicId, status: claims.status })
+        .from(claims)
+        .where(eq(claims.id, input.newParentId))
+        .limit(1);
+      const newParent = parentRows[0];
+      if (!newParent) throw new Error(`Unknown parent ${input.newParentId}`);
+      if (newParent.topicId !== claim.topicId) throw new Error('Parent belongs to another topic');
+      if (!['active', 'challenged', 'responded', 'disputed'].includes(newParent.status)) {
+        throw new Error(`Parent status ${newParent.status} cannot accept migrated claims`);
+      }
+    }
 
     const rows = await tx
       .select({
@@ -377,19 +417,101 @@ export async function promoteClaimToReasonLayer(input: { claimId: string; actorI
       .from(claims)
       .where(eq(claims.topicId, claim.topicId));
 
-    const plan = buildReparentPlan(rows, input.claimId, null);
+    const plan = buildReparentPlan(rows, input.claimId, input.newParentId);
     for (const [claimId, ancestors] of plan.ancestorsById) {
-      const setFields: { ancestors: string[]; parentId?: string | null } = { ancestors };
-      if (claimId === input.claimId) setFields.parentId = null;
+      const setFields: {
+        ancestors: string[];
+        depth: number;
+        parentId?: string | null;
+        status?: string;
+        relation?: string;
+      } = { ancestors, depth: ancestors.length };
+      if (claimId === input.claimId) {
+        setFields.parentId = input.newParentId;
+        setFields.status = 'active';
+        if (input.newParentId === null) setFields.relation = 'root';
+      }
       await tx.update(claims).set(setFields).where(eq(claims.id, claimId));
     }
-    await tx.update(claims).set({ status: 'active' }).where(eq(claims.id, input.claimId));
+
+    const promoted = input.newParentId === null;
     await tx.insert(claimEvents).values({
       topicId: claim.topicId,
       claimId: input.claimId,
-      type: 'promoted',
+      type: promoted ? 'promoted' : 'migrated',
       actorUserId: input.actorId,
-      detail: { reason: 'promote_to_reason_layer' },
+      detail: {
+        fromParentId: claim.parentId,
+        toParentId: input.newParentId,
+        reason: input.reason ?? (promoted ? 'promote_to_reason_layer' : 'rescue_migration'),
+        movedClaims: plan.ancestorsById.size,
+      },
     });
+  });
+}
+
+export async function promoteClaimToReasonLayer(input: { claimId: string; actorId: string }) {
+  return migrateClaim({ ...input, newParentId: null, reason: 'promote_to_reason_layer' });
+}
+
+export async function reviseClaim(input: {
+  claimId: string;
+  authorId: string;
+  contentTitle: string;
+  contentBody?: string;
+}) {
+  return db.transaction(async (tx) => {
+    const claimRows = await tx
+      .select({
+        id: claims.id,
+        topicId: claims.topicId,
+        parentId: claims.parentId,
+        ancestors: claims.ancestors,
+        relation: claims.relation,
+        status: claims.status,
+        authorId: claims.authorId,
+      })
+      .from(claims)
+      .where(eq(claims.id, input.claimId))
+      .limit(1);
+    const claim = claimRows[0];
+    if (!claim) throw new Error(`Unknown claim ${input.claimId}`);
+    if (claim.authorId !== input.authorId) throw new Error('Only the claim author can revise');
+    if (!canTransition(claim.status as ClaimStatus, 'superseded')) {
+      throw new Error(`Claim status ${claim.status} cannot be superseded`);
+    }
+
+    const [revision] = await tx
+      .insert(claims)
+      .values({
+        topicId: claim.topicId,
+        parentId: claim.parentId,
+        relation: claim.relation as ClaimRelation,
+        contentTitle: input.contentTitle,
+        contentBody: input.contentBody,
+        authorId: input.authorId,
+        status: 'active',
+        depth: claim.ancestors.length,
+        ancestors: claim.ancestors,
+        supersedesClaimId: claim.id,
+      })
+      .returning();
+
+    await tx.update(claims).set({ status: 'superseded' }).where(eq(claims.id, claim.id));
+    await tx.insert(claimEvents).values({
+      topicId: claim.topicId,
+      claimId: claim.id,
+      type: 'superseded',
+      actorUserId: input.authorId,
+      detail: { supersededByClaimId: revision.id },
+    });
+    await tx.insert(claimEvents).values({
+      topicId: claim.topicId,
+      claimId: revision.id,
+      type: 'created',
+      actorUserId: input.authorId,
+      detail: { parentId: claim.parentId, relation: claim.relation, supersedesClaimId: claim.id },
+    });
+    return revision;
   });
 }

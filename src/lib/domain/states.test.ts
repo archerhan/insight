@@ -17,6 +17,11 @@ describe('claim state machine', () => {
     expect(canTransition('refuted', 'active')).toBe(false);
   });
 
+  it('被挂红或已回应后仍可修订观点（旧版 superseded）', () => {
+    expect(canTransition('challenged', 'superseded')).toBe(true);
+    expect(canTransition('responded', 'superseded')).toBe(true);
+  });
+
   it('悬空节点可被抢救回 active，也可继续悬空归档', () => {
     expect(canTransition('orphaned', 'active')).toBe(true);
     expect(canTransition('orphaned', 'collapsed')).toBe(true);
