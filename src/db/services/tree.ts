@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import {
   canTransition,
   validateClaimShape,
@@ -7,7 +7,7 @@ import {
 } from '@/lib/domain/states';
 import { buildReparentPlan, childAncestors, type ClaimLike } from '@/lib/domain/tree';
 import { planRefutationCascade } from '@/lib/domain/propagation';
-import { db, type Db } from '@/db/client';
+import { db, type DbTx } from '@/db/client';
 import { challenges, claimEvents, claims, topics, users } from '@/db/schema';
 
 /**
@@ -15,13 +15,13 @@ import { challenges, claimEvents, claims, topics, users } from '@/db/schema';
  * 并同步写 claim_events（时间轴/审计）。状态校验复用 domain 纯函数。
  */
 
-type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+type Tx = DbTx;
 
 function daysFromNow(days: number): Date {
   return new Date(Date.now() + days * 86_400_000);
 }
 
-async function insertClaimInTx(
+export async function insertClaimInTx(
   tx: Tx,
   input: {
     topicId: string;
@@ -143,6 +143,33 @@ async function writeCascadeInTx(
       detail: challengeId ? { challengeId } : {},
     });
   }
+
+  // 被击穿/悬空/目标失效的节点上若还有其它 open 反驳，一并置 moot（父论点已失效，不再判胜负）
+  const invalidatedIds = plan.updates
+    .filter((update) => ['refuted', 'orphaned', 'moot'].includes(update.status))
+    .map((update) => update.claimId);
+  if (invalidatedIds.length > 0) {
+    const otherOpen = await tx
+      .select({ id: challenges.id })
+      .from(challenges)
+      .where(
+        and(
+          eq(challenges.topicId, topicId),
+          eq(challenges.status, 'open'),
+          inArray(challenges.targetClaimId, invalidatedIds),
+        ),
+      );
+    for (const row of otherOpen) {
+      await tx
+        .update(challenges)
+        .set({
+          status: 'moot',
+          resolutionReason: 'target_refuted',
+          resolvedAt: new Date(),
+        })
+        .where(eq(challenges.id, row.id));
+    }
+  }
 }
 
 export async function createTopicWithRoot(input: {
@@ -210,6 +237,71 @@ export async function createClaimUnder(input: {
   );
 }
 
+/** 事务内打开一条挂红：校验反驳节点形态后写 challenge + 目标状态 + 事件。 */
+export async function openChallengeInTx(
+  tx: Tx,
+  input: {
+    topicId: string;
+    targetClaimId: string;
+    challengerClaimId: string;
+    actorUserId: string;
+  },
+) {
+  const [challenger] = await tx
+    .select({
+      id: claims.id,
+      topicId: claims.topicId,
+      parentId: claims.parentId,
+      relation: claims.relation,
+    })
+    .from(claims)
+    .where(eq(claims.id, input.challengerClaimId))
+    .limit(1);
+  if (!challenger || challenger.topicId !== input.topicId) {
+    throw new Error(`Unknown challenger claim ${input.challengerClaimId}`);
+  }
+  if (challenger.parentId !== input.targetClaimId || challenger.relation !== 'con') {
+    throw new Error('challenger 必须是 target 的直接 con 子节点');
+  }
+
+  const [target] = await tx
+    .select({ id: claims.id, topicId: claims.topicId, status: claims.status })
+    .from(claims)
+    .where(eq(claims.id, input.targetClaimId))
+    .limit(1);
+  if (!target || target.topicId !== input.topicId) throw new Error('Unknown target claim');
+
+  const now = new Date();
+  const [challenge] = await tx
+    .insert(challenges)
+    .values({
+      topicId: input.topicId,
+      targetClaimId: input.targetClaimId,
+      challengerClaimId: input.challengerClaimId,
+      openedAt: now,
+      orangeAt: daysFromNow(3),
+      redAt: daysFromNow(7),
+      defaultLossAt: daysFromNow(14),
+    })
+    .returning();
+
+  if (canTransition(target.status as ClaimStatus, 'challenged')) {
+    await tx.update(claims).set({ status: 'challenged' }).where(eq(claims.id, target.id));
+  }
+  await tx.insert(claimEvents).values({
+    topicId: input.topicId,
+    claimId: target.id,
+    type: 'challenged',
+    actorUserId: input.actorUserId,
+    detail: {
+      challengeId: challenge.id,
+      challengerClaimId: input.challengerClaimId,
+      rebuttalClaimId: input.challengerClaimId,
+    },
+  });
+  return challenge;
+}
+
 export async function attachRebuttal(input: {
   topicId: string;
   targetClaimId: string;
@@ -218,13 +310,15 @@ export async function attachRebuttal(input: {
   authorId: string;
 }) {
   return db.transaction(async (tx) => {
-    const targetRows = await tx
-      .select({ id: claims.id, topicId: claims.topicId, status: claims.status })
+    const [target] = await tx
+      .select({ id: claims.id, topicId: claims.topicId, status: claims.status, authorId: claims.authorId })
       .from(claims)
       .where(eq(claims.id, input.targetClaimId))
       .limit(1);
-    const target = targetRows[0];
     if (!target || target.topicId !== input.topicId) throw new Error('Unknown target claim');
+    if (target.authorId === input.authorId) {
+      throw new Error('不能反驳自己发布的论点：请让反驳来自另一方');
+    }
 
     const rebuttal = await insertClaimInTx(tx, {
       topicId: input.topicId,
@@ -234,32 +328,12 @@ export async function attachRebuttal(input: {
       contentBody: input.contentBody,
       authorId: input.authorId,
     });
-
-    const now = new Date();
-    const [challenge] = await tx
-      .insert(challenges)
-      .values({
-        topicId: input.topicId,
-        targetClaimId: input.targetClaimId,
-        challengerClaimId: rebuttal.id,
-        openedAt: now,
-        orangeAt: daysFromNow(3),
-        redAt: daysFromNow(7),
-        defaultLossAt: daysFromNow(14),
-      })
-      .returning();
-
-    if (canTransition(target.status as ClaimStatus, 'challenged')) {
-      await tx.update(claims).set({ status: 'challenged' }).where(eq(claims.id, target.id));
-    }
-    await tx.insert(claimEvents).values({
+    return openChallengeInTx(tx, {
       topicId: input.topicId,
-      claimId: target.id,
-      type: 'challenged',
+      targetClaimId: input.targetClaimId,
+      challengerClaimId: rebuttal.id,
       actorUserId: input.authorId,
-      detail: { challengeId: challenge.id, rebuttalClaimId: rebuttal.id },
     });
-    return challenge;
   });
 }
 
@@ -286,13 +360,21 @@ export async function respondToChallenge(input: {
     if (challenge.status !== 'open') throw new Error('Challenge is not open');
 
     const targetRows = await tx
-      .select({ id: claims.id, authorId: claims.authorId, topicId: claims.topicId })
+      .select({
+        id: claims.id,
+        authorId: claims.authorId,
+        topicId: claims.topicId,
+        status: claims.status,
+      })
       .from(claims)
       .where(eq(claims.id, challenge.targetClaimId))
       .limit(1);
     const target = targetRows[0];
     if (!target || target.authorId !== input.authorId) {
       throw new Error('Only the target claim author can respond');
+    }
+    if (target.status !== 'challenged') {
+      throw new Error(`目标论点当前状态为 ${target.status}，不能回应这条反驳（请刷新查看）`);
     }
 
     const response = await insertClaimInTx(tx, {
@@ -334,16 +416,26 @@ export async function concedeToChallenge(input: { challengeId: string; actorId: 
       .where(eq(challenges.id, input.challengeId))
       .limit(1);
     const challenge = challengeRows[0];
-    if (!challenge || challenge.status !== 'open') throw new Error('Challenge is not open');
+    if (!challenge || !['open', 'responded'].includes(challenge.status)) {
+      throw new Error('Challenge is not open or responded');
+    }
 
     const targetRows = await tx
-      .select({ id: claims.id, authorId: claims.authorId, topicId: claims.topicId })
+      .select({
+        id: claims.id,
+        authorId: claims.authorId,
+        topicId: claims.topicId,
+        status: claims.status,
+      })
       .from(claims)
       .where(eq(claims.id, challenge.targetClaimId))
       .limit(1);
     const target = targetRows[0];
     if (!target || target.authorId !== input.actorId) {
       throw new Error('Only the target claim author can concede');
+    }
+    if (!['active', 'challenged', 'responded', 'disputed'].includes(target.status)) {
+      throw new Error(`目标论点当前状态为 ${target.status}，不能再承认击穿（请刷新查看）`);
     }
 
     await writeCascadeInTx(
@@ -377,12 +469,16 @@ export async function migrateClaim(input: {
         ancestors: claims.ancestors,
         relation: claims.relation,
         status: claims.status,
+        authorId: claims.authorId,
       })
       .from(claims)
       .where(eq(claims.id, input.claimId))
       .limit(1);
     const claim = claimRows[0];
     if (!claim) throw new Error(`Unknown claim ${input.claimId}`);
+    if (claim.authorId !== input.actorId) {
+      throw new Error('Only the claim author can migrate/promote');
+    }
     if (claim.parentId === input.newParentId) {
       throw new Error('Claim is already under the target parent');
     }

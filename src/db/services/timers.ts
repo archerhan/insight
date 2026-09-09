@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { db } from '@/db/client';
+import { db, type DbTx } from '@/db/client';
 import { challenges, claimEvents } from '@/db/schema';
 import { challengePhaseAt, type ChallengePhase } from '@/lib/domain/challenges';
 
@@ -25,6 +25,49 @@ function phasesUpTo(phase: ChallengePhase): ChallengePhase[] {
   return order.slice(0, order.indexOf(phase) + 1);
 }
 
+async function advanceRowsInTx(
+  tx: DbTx,
+  now: Date,
+  rows: Array<{ id: string; topicId: string; targetClaimId: string; openedAt: Date }>,
+): Promise<TimerAdvanceResult[]> {
+  const results: TimerAdvanceResult[] = [];
+  for (const challenge of rows) {
+    const phase = challengePhaseAt(now.toISOString(), challenge.openedAt.toISOString());
+    if (phase === 'open') {
+      results.push({ challengeId: challenge.id, phase, eventWritten: false });
+      continue;
+    }
+
+    const existing = await tx
+      .select({ detail: claimEvents.detail })
+      .from(claimEvents)
+      .where(
+        and(
+          eq(claimEvents.topicId, challenge.topicId),
+          eq(claimEvents.claimId, challenge.targetClaimId),
+          eq(claimEvents.type, 'challenge_timer'),
+        ),
+      );
+    let eventWritten = false;
+    for (const phaseToLog of phasesUpTo(phase)) {
+      const alreadyLogged = existing.some(
+        (event) => event.detail && event.detail.phase === phaseToLog,
+      );
+      if (!alreadyLogged) {
+        await tx.insert(claimEvents).values({
+          topicId: challenge.topicId,
+          claimId: challenge.targetClaimId,
+          type: 'challenge_timer',
+          detail: { challengeId: challenge.id, phase: phaseToLog, loggedAt: now.toISOString() },
+        });
+        eventWritten = true;
+      }
+    }
+    results.push({ challengeId: challenge.id, phase, eventWritten });
+  }
+  return results;
+}
+
 export async function advanceChallengeTimers(
   now: Date = new Date(),
   limit = 100,
@@ -40,42 +83,25 @@ export async function advanceChallengeTimers(
       .from(challenges)
       .where(eq(challenges.status, 'open'))
       .limit(limit);
+    return advanceRowsInTx(tx, now, openChallenges);
+  });
+}
 
-    const results: TimerAdvanceResult[] = [];
-    for (const challenge of openChallenges) {
-      const phase = challengePhaseAt(now.toISOString(), challenge.openedAt.toISOString());
-      if (phase === 'open') {
-        results.push({ challengeId: challenge.id, phase, eventWritten: false });
-        continue;
-      }
-
-      const existing = await tx
-        .select({ detail: claimEvents.detail })
-        .from(claimEvents)
-        .where(
-          and(
-            eq(claimEvents.topicId, challenge.topicId),
-            eq(claimEvents.claimId, challenge.targetClaimId),
-            eq(claimEvents.type, 'challenge_timer'),
-          ),
-        );
-      let eventWritten = false;
-      for (const phaseToLog of phasesUpTo(phase)) {
-        const alreadyLogged = existing.some(
-          (event) => event.detail && event.detail.phase === phaseToLog,
-        );
-        if (!alreadyLogged) {
-          await tx.insert(claimEvents).values({
-            topicId: challenge.topicId,
-            claimId: challenge.targetClaimId,
-            type: 'challenge_timer',
-            detail: { challengeId: challenge.id, phase: phaseToLog, loggedAt: now.toISOString() },
-          });
-          eventWritten = true;
-        }
-      }
-      results.push({ challengeId: challenge.id, phase, eventWritten });
-    }
-    return results;
+/** 读取路径的惰性兜底：只推进单个话题内的未决反驳（幂等）。 */
+export async function advanceChallengeTimersForTopic(
+  topicId: string,
+  now: Date = new Date(),
+): Promise<TimerAdvanceResult[]> {
+  return db.transaction(async (tx) => {
+    const openChallenges = await tx
+      .select({
+        id: challenges.id,
+        topicId: challenges.topicId,
+        targetClaimId: challenges.targetClaimId,
+        openedAt: challenges.openedAt,
+      })
+      .from(challenges)
+      .where(and(eq(challenges.topicId, topicId), eq(challenges.status, 'open')));
+    return advanceRowsInTx(tx, now, openChallenges);
   });
 }

@@ -14,23 +14,30 @@ vi.mock('@/lib/auth/current-user', () => ({
   getCurrentUserOrRedirect: vi.fn(),
 }));
 
+vi.mock('./actions', () => ({
+  publishTopicAction: vi.fn(async () => ({ error: null })),
+}));
+
 import { getCurrentUserOrRedirect } from '@/lib/auth/current-user';
 import NewTopicPage from './page';
 
 const guardMock = vi.mocked(getCurrentUserOrRedirect);
 
-describe('发起话题占位页', () => {
-  it('已通过须知时展示三步向导骨架', async () => {
+describe('发起话题页（M2 向导入口）', () => {
+  it('已通过须知时渲染三步向导与类型选择', async () => {
     guardMock.mockResolvedValueOnce({
       id: 'u-1',
       displayName: '明',
       courseCompletedAt: new Date('2026-09-09T08:30:00Z'),
     } as never);
-    const markup = renderToStaticMarkup(await NewTopicPage());
+    const markup = renderToStaticMarkup(
+      await NewTopicPage({ searchParams: Promise.resolve({}) }),
+    );
     expect(markup).toContain('发起话题');
-    expect(markup).toContain('类型');
-    expect(markup).toContain('主张与论据');
-    expect(markup).toContain('规则与发布');
+    expect(markup).toContain('我在做选择');
+    expect(markup).toContain('我要验证一个观点');
+    expect(markup).toContain('下一步');
+    expect(markup).not.toContain('待开放');
   });
 
   it('未完成须知时跳转须知页并带回跳地址', async () => {
@@ -39,7 +46,9 @@ describe('发起话题占位页', () => {
       displayName: '辩手',
       courseCompletedAt: null,
     } as never);
-    await expect(NewTopicPage()).rejects.toThrow('NEXT_REDIRECT');
+    await expect(
+      NewTopicPage({ searchParams: Promise.resolve({}) }),
+    ).rejects.toThrow('NEXT_REDIRECT');
     expect(redirectMock).toHaveBeenCalledWith('/guide?next=%2Ftopics%2Fnew');
   });
 });

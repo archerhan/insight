@@ -3,9 +3,9 @@
  * 运行：pnpm db:seed（需要 DATABASE_URL，先执行迁移）。
  * 幂等：同一标题的话题/论点/论据不会重复插入；可安全重复执行。
  */
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db } from './client';
-import { claimEvents, claims, evidence, topics, users } from './schema';
+import { claimEvents, claims, evidence, tags, topicTags, topics, users } from './schema';
 
 const DEMO_USERS = [
   {
@@ -123,6 +123,31 @@ async function insertEvidence(input: {
     createdById: input.createdById,
     status: 'pending',
   });
+}
+
+async function ensureTopicTags(topicId: string, names: string[]) {
+  const unique = [...new Set(names)];
+  if (unique.length === 0) return;
+  await db
+    .insert(tags)
+    .values(unique.map((name) => ({ name })))
+    .onConflictDoNothing({ target: tags.name });
+  const tagRows = await db
+    .select({ id: tags.id, name: tags.name })
+    .from(tags)
+    .where(inArray(tags.name, unique));
+  const existing = await db
+    .select({ tagId: topicTags.tagId })
+    .from(topicTags)
+    .where(eq(topicTags.topicId, topicId));
+  const existingIds = new Set(existing.map((row) => row.tagId));
+  const missing = tagRows.filter((row) => !existingIds.has(row.id));
+  if (missing.length > 0) {
+    await db
+      .insert(topicTags)
+      .values(missing.map((row) => ({ topicId, tagId: row.id })))
+      .onConflictDoNothing();
+  }
 }
 
 async function seedMinsuTree(ownerId: string, rebutterId: string) {
@@ -252,5 +277,7 @@ export async function main() {
   const { ownerId, rebutterId } = await ensureUsers();
   const minsu = await seedMinsuTree(ownerId, rebutterId);
   const ai = await seedAiTopicTree(ownerId, rebutterId);
+  await ensureTopicTags(minsu.id, ['职业', '生活方式', '创业']);
+  await ensureTopicTags(ai.id, ['科技', '公共议题']);
   console.log('seed done:', { minsuTopic: minsu.id, aiTopic: ai.id });
 }

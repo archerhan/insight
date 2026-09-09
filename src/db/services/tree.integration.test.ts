@@ -322,4 +322,104 @@ describeDb('树操作事务层（集成）', () => {
     expect(timerEvents.map((event) => event.detail?.phase).sort()).toEqual(['due', 'orange', 'red']);
     expect((await claimRow(root.id))?.status).toBe('challenged'); // 阶段推进不改论点状态（判负需陪审）
   });
+
+  it('attachRebuttal 拒绝作者反驳自己的论点', async () => {
+    const { ownerId } = await createDemoUsers();
+    const { topic, root } = await tree.createTopicWithRoot({
+      ownerId,
+      type: 'decision',
+      title: `自反驳测试 ${nonce}`,
+      rootContentTitle: 'AI 编程能显著提高开发效率',
+    });
+    await expect(
+      tree.attachRebuttal({
+        topicId: topic.id,
+        targetClaimId: root.id,
+        contentTitle: '自己反驳自己',
+        authorId: ownerId,
+      }),
+    ).rejects.toThrow(/不能反驳自己/);
+  });
+
+  it('作者已回应后仍可承认击穿：challenge 变 conceded，击杀链提升', async () => {
+    const { ownerId, rebutterId } = await createDemoUsers();
+    const { topic, root } = await tree.createTopicWithRoot({
+      ownerId,
+      type: 'claim',
+      title: `回应后承认 ${nonce}`,
+      rootContentTitle: 'AI 编程能显著提高开发效率',
+    });
+    const challenge = await tree.attachRebuttal({
+      topicId: topic.id,
+      targetClaimId: root.id,
+      contentTitle: 'AI 错误隐蔽，返工吃掉提速',
+      authorId: rebutterId,
+    });
+    await tree.respondToChallenge({
+      challengeId: challenge.id,
+      authorId: ownerId,
+      contentTitle: '样板任务占比过半，返工可控',
+    });
+    await tree.concedeToChallenge({ challengeId: challenge.id, actorId: ownerId });
+
+    const [challengeRow] = await db
+      .select({ status: challenges.status, resolutionReason: challenges.resolutionReason })
+      .from(challenges)
+      .where(eq(challenges.id, challenge.id));
+    expect(challengeRow).toMatchObject({
+      status: 'conceded',
+      resolutionReason: 'author_conceded',
+    });
+    const killer = await claimRow(challenge.challengerClaimId);
+    expect(killer).toMatchObject({ parentId: null, relation: 'root', status: 'active' });
+  });
+
+  it('承认一条击穿后，同一目标的其他 open 反驳自动 moot', async () => {
+    const { ownerId, rebutterId } = await createDemoUsers();
+    const { topic, root } = await tree.createTopicWithRoot({
+      ownerId,
+      type: 'decision',
+      title: `多挑战 moot ${nonce}`,
+      rootContentTitle: '裸辞去大理开民宿，是实现自由生活的现实路径',
+    });
+    const first = await tree.attachRebuttal({
+      topicId: topic.id,
+      targetClaimId: root.id,
+      contentTitle: '反驳甲',
+      authorId: rebutterId,
+    });
+    const second = await tree.attachRebuttal({
+      topicId: topic.id,
+      targetClaimId: root.id,
+      contentTitle: '反驳乙',
+      authorId: rebutterId,
+    });
+    await tree.concedeToChallenge({ challengeId: first.id, actorId: ownerId });
+
+    const [secondRow] = await db
+      .select({ status: challenges.status, resolutionReason: challenges.resolutionReason })
+      .from(challenges)
+      .where(eq(challenges.id, second.id));
+    expect(secondRow).toMatchObject({ status: 'moot', resolutionReason: 'target_refuted' });
+  });
+
+  it('migrate/promote 只允许论点作者本人操作', async () => {
+    const { ownerId, rebutterId } = await createDemoUsers();
+    const { topic, root } = await tree.createTopicWithRoot({
+      ownerId,
+      type: 'decision',
+      title: `迁移权限 ${nonce}`,
+      rootContentTitle: '大理民宿项目评估',
+    });
+    const a = await tree.createClaimUnder({
+      topicId: topic.id,
+      parentId: root.id,
+      relation: 'pro',
+      contentTitle: '需要被保护的论点',
+      authorId: ownerId,
+    });
+    await expect(
+      tree.migrateClaim({ claimId: a.id, actorId: rebutterId, newParentId: null }),
+    ).rejects.toThrow(/claim author/);
+  });
 });

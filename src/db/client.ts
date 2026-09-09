@@ -5,6 +5,8 @@ import * as schema from './schema';
 
 export type Db = PostgresJsDatabase<typeof schema>;
 
+export type DbTx = Parameters<Parameters<Db['transaction']>[0]>[0];
+
 let database: Db | undefined;
 
 /** 懒加载：模块导入不读环境变量，首次真正访问数据库时才创建连接。 */
@@ -14,8 +16,12 @@ export function getDb(): Db {
   if (!connectionString) {
     throw new Error('DATABASE_URL is not set');
   }
-  /** Neon 无内置 RLS：所有访问收敛到本服务端 client，权限在 repository/service 层校验。 */
-  const sql = postgres(connectionString, { max: 1, prepare: false });
+  /**
+   * Neon 无内置 RLS：所有访问收敛到本服务端 client，权限在 repository/service 层校验。
+   * 连接池 >1：页面内并行查询（Promise.all）才真正并发；
+   * 使用 -pooler 连接串时由 Neon 端 PgBouncer 聚合，本地少量长连接是安全的。
+   */
+  const sql = postgres(connectionString, { max: 5, prepare: false });
   database = drizzle(sql, { schema });
   return database;
 }
