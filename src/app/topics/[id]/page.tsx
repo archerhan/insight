@@ -4,7 +4,15 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, Clock3, FileText, Scale, Swords, Users } from 'lucide-react';
 import { TopicViewTabs } from '@/components/topic-view-tabs';
 import { TopicArenaView } from '@/components/arena/topic-arena-view';
+import { ConclusionContent } from '@/components/conclusion/conclusion-content';
+import { ConclusionWizard } from '@/components/conclusion/conclusion-wizard';
+import { StanceChangeWizard } from '@/components/conclusion/stance-change-wizard';
 import { getArenaView } from '@/db/services/arena';
+import {
+  getAdoptionDraftContext,
+  getConclusionView,
+} from '@/db/services/conclusion';
+import { listStanceSourceClaims } from '@/db/services/stance';
 import { getPublicTopicDetail } from '@/db/services/topics';
 import { getCurrentUser } from '@/lib/auth/current-user';
 import { loginHref } from '@/lib/auth/url';
@@ -101,8 +109,10 @@ export default async function TopicPage({ params, searchParams }: TopicPageParam
   const query = await searchParams;
   const focusClaimId = firstParam(query.claim);
   const explicitTab = firstParam(query.tab);
-  // 默认/对线深链：对线数据与话题详情、会话并行取，省去串行等待
+  // 默认视图取决于话题状态，未显式指定 tab 时并行取对线与结论书数据，
+  // 显式指定时只取对应视图数据，省去串行等待。
   const wantArenaInParallel = explicitTab === undefined || explicitTab === 'arena';
+  const wantConclusionInParallel = explicitTab === undefined || explicitTab === 'conclusion';
   const [topic, user, arenaInParallel] = await Promise.all([
     getPublicTopicDetail(id),
     getCurrentUser(),
@@ -114,6 +124,22 @@ export default async function TopicPage({ params, searchParams }: TopicPageParam
   const view = resolveTopicView(query, fallbackView);
 
   const arenaData = view === 'arena' ? arenaInParallel : null;
+  const [conclusionData, adoptionCtx] = await Promise.all([
+    wantConclusionInParallel ? getConclusionView(id) : Promise.resolve(null),
+    wantConclusionInParallel ? getAdoptionDraftContext(id) : Promise.resolve(null),
+  ]);
+
+  // 对线/结论书视图内为当前用户准备“我改主意了”的来源候选（仅登录用户）。
+  let stanceSources: Array<{ id: string; contentTitle: string; authorName: string | null }> = [];
+  let defaultFromStance = '';
+  if (view !== 'map' && user?.id) {
+    stanceSources = await listStanceSourceClaims(id, user.id);
+    defaultFromStance =
+      topic.rootClaims.at(-1)?.contentTitle ??
+      arenaData?.focus?.contentTitle ??
+      conclusionData?.items.at(-1)?.contentTitle ??
+      '';
+  }
   const topicPath = currentPath(id, focusClaimId);
 
   return (
@@ -159,7 +185,17 @@ export default async function TopicPage({ params, searchParams }: TopicPageParam
           <StatItem icon={Users} label="公开反驳" value={topic.allowPublicRebuttal ? '公开' : '受邀'} />
           <StatItem icon={FileText} label="立帖为证" value={topic.stakeEnabled ? '已开启' : '未开启'} />
         </div>
-        <TopicViewTabs defaultView={fallbackView} />
+        <div className="flex flex-wrap items-center gap-3">
+          <TopicViewTabs defaultView={fallbackView} />
+          {user?.id && view !== 'map' && (
+            <StanceChangeWizard
+              topicId={topic.id}
+              tab={view}
+              defaultFrom={defaultFromStance}
+              sources={stanceSources}
+            />
+          )}
+        </div>
       </div>
 
       {view === 'arena' && arenaData && (
@@ -197,9 +233,30 @@ export default async function TopicPage({ params, searchParams }: TopicPageParam
               </ul>
             </section>
           )}
-          <PlaceholderCard title="结论书视图将在 M4 接入">
-            当前话题未决反驳 {topic.openChallengeCount} 条，收敛后这里会呈现结论摘要、采纳理由与未决风险区。
-          </PlaceholderCard>
+          {topic.status === 'open' && user?.id === topic.ownerId && topic.closeMode === 'owner' && (
+            <ConclusionWizard
+              topicId={topic.id}
+              roots={adoptionCtx?.roots ?? []}
+              openChallenges={adoptionCtx?.openChallenges ?? []}
+            />
+          )}
+          {topic.status === 'open' && (user?.id !== topic.ownerId || topic.closeMode !== 'owner') && (
+            <PlaceholderCard title="结论书尚未发布">
+              {topic.closeMode === 'owner'
+                ? `楼主还在整理采纳条目与结论。当前未决反驳 ${topic.openChallengeCount} 条，等楼主收敛后这里会呈现结论摘要、采纳理由与未决风险区。`
+                : '公共议题的收敛由社区机制触发（后续版本支持），楼主没有单独关闭权。'}
+            </PlaceholderCard>
+          )}
+          {topic.status !== 'open' &&
+            (conclusionData ? (
+              <ConclusionContent
+                data={conclusionData}
+              />
+            ) : (
+              <PlaceholderCard title="结论书暂不可用">
+                该话题尚未发布可导出的结论书版本，请稍后再来。
+              </PlaceholderCard>
+            ))}
         </>
       )}
 

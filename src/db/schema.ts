@@ -250,7 +250,13 @@ export const conclusionItems = pgTable(
     position: integer('position').notNull(),
     role: text('role').notNull().default('adopted_reason'),
     supportChain: jsonb('support_chain').$type<
-      Array<{ claimId: string; contentTitle: string; authorId: string }>
+      Array<{
+        claimId: string;
+        contentTitle: string;
+        authorId: string;
+        authorName?: string | null;
+        evidenceIds?: string[];
+      }>
     >(),
     note: text('note'),
     adoptedByUserId: uuid('adopted_by_user_id').references(() => users.id),

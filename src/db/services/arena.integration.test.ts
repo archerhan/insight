@@ -12,6 +12,8 @@ import {
   challenges,
   claimEvents,
   claims,
+  conclusionItems,
+  conclusionVersions,
   evidence,
   topics,
   users,
@@ -25,6 +27,7 @@ describeDb('对线视图读服务（集成）', () => {
   let tree: typeof import('./tree');
   let rebuttal: typeof import('./rebuttal');
   let arena: typeof import('./arena');
+  let conclusion: typeof import('./conclusion');
   const nonce = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   let userSeq = 0;
   const topicIds: string[] = [];
@@ -36,10 +39,20 @@ describeDb('对线视图读服务（集成）', () => {
     tree = await import('./tree');
     rebuttal = await import('./rebuttal');
     arena = await import('./arena');
+    conclusion = await import('./conclusion');
   });
 
   afterAll(async () => {
     for (const topicId of topicIds) {
+      const versionRows = await db
+        .select({ id: conclusionVersions.id })
+        .from(conclusionVersions)
+        .where(eq(conclusionVersions.topicId, topicId));
+      const versionIds = versionRows.map((row) => row.id);
+      if (versionIds.length > 0) {
+        await db.delete(conclusionItems).where(inArray(conclusionItems.versionId, versionIds));
+        await db.delete(conclusionVersions).where(inArray(conclusionVersions.id, versionIds));
+      }
       const claimRows = await db
         .select({ id: claims.id })
         .from(claims)
@@ -280,5 +293,36 @@ describeDb('对线视图读服务（集成）', () => {
     expect(view?.focus?.supersedesClaimId).toBe(root.id);
     expect(view?.rescuableClaims.map((claim) => claim.id)).toEqual([pro.id]);
     expect(view?.rebuttals.some((claim) => claim.id === pro.id)).toBe(false);
+  });
+
+  it('收敛并采纳后，merged 根立场仍可在对线视图下钻浏览', async () => {
+    const { ownerId, rebutterId } = await createUsers();
+    const { topic, root } = await openTopic(ownerId, '收敛浏览');
+    const killer = await tree.attachRebuttal({
+      topicId: topic.id,
+      targetClaimId: root.id,
+      contentTitle: '先用年假试住验证，再决定是否裸辞',
+      authorId: rebutterId,
+    });
+    await tree.concedeToChallenge({ challengeId: killer.id, actorId: ownerId });
+
+    const killerClaim = (
+      await db
+        .select({ id: claims.id })
+        .from(claims)
+        .where(eq(claims.id, killer.challengerClaimId))
+        .limit(1)
+    )[0];
+    await conclusion.publishConclusion({
+      topicId: topic.id,
+      actorId: ownerId,
+      verdictText: '先用年假完成实地验证再决定是否投入',
+      adoptedClaimIds: [killerClaim!.id],
+    });
+
+    const view = await arena.getArenaView(topic.id);
+    expect(view?.topicStatus).toBe('converged');
+    expect(view?.rootId).toBe(killerClaim!.id);
+    expect(view?.focus).toMatchObject({ id: killerClaim!.id, status: 'merged' });
   });
 });

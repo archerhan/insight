@@ -204,7 +204,19 @@ export async function getArenaView(
         ACTIVE_ROOT_STATUSES.includes(row.status as ClaimStatus),
     )
     .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  const rootId = rootClaims.at(-1)?.id ?? null;
+  let rootId = rootClaims.at(-1)?.id ?? null;
+  // 收敛后采纳理由被置 merged、被击穿根立场置 refuted：仍允许在对线视图下钻浏览证据链。
+  if (rootId === null && topic.status !== 'open') {
+    const historicalRoots = claimRows
+      .filter(
+        (row) =>
+          row.parentId === null &&
+          row.relation === 'root' &&
+          ['merged', 'refuted', 'adjudicated'].includes(row.status as ClaimStatus),
+      )
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    rootId = historicalRoots.at(-1)?.id ?? null;
+  }
 
   let focus = rootId ? (byId.get(rootId) ?? null) : null;
   if (focusClaimId && isClaimId(focusClaimId) && byId.has(focusClaimId)) {

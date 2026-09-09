@@ -17,6 +17,7 @@ export interface TopicDetail {
   title: string;
   body: string | null;
   status: string;
+  ownerId: string;
   closeMode: string;
   stakeEnabled: boolean;
   revealAt: Date | null;
@@ -41,6 +42,7 @@ async function getPublicTopicDetailImpl(id: string): Promise<TopicDetail | null>
       title: topics.title,
       body: topics.body,
       status: topics.status,
+      ownerId: topics.ownerId,
       closeMode: topics.closeMode,
       stakeEnabled: topics.stakeEnabled,
       revealAt: topics.revealAt,
@@ -96,6 +98,7 @@ async function getPublicTopicDetailImpl(id: string): Promise<TopicDetail | null>
     title: topic.title,
     body: topic.body,
     status: topic.status,
+    ownerId: topic.ownerId,
     closeMode: topic.closeMode,
     stakeEnabled: topic.stakeEnabled,
     revealAt: topic.revealAt,

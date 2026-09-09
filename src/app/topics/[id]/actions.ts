@@ -13,10 +13,13 @@ import {
   respondToChallenge as respondService,
   type NodeWriteOutcome,
 } from '@/db/services/rebuttal';
+import { publishConclusion as publishConclusionService } from '@/db/services/conclusion';
+import { recordStanceChange as recordStanceChangeService } from '@/db/services/stance';
 import { getUserById } from '@/db/services/users';
 import { loginHref } from '@/lib/auth/url';
 import { publishGateError } from '@/lib/domain/course';
 import { validateReplyDraft } from '@/lib/domain/rebuttal-checks';
+import { isTopicView } from '@/lib/navigation/topic-view';
 
 /**
  * M3 对线动作层：登录/须知门槛与作者权限在 Server Action 二次校验，
@@ -250,4 +253,82 @@ export async function rescueMigrateAction(
     return { error: errorMessage(error) };
   }
   redirect(arenaHref(topicId, newParentId));
+}
+
+/** 出结论书 v1：楼主采纳理由层节点 + 填正文；带险关闭需逐条勾选未决反驳。 */
+export async function publishConclusionAction(
+  _prev: TopicActionState,
+  formData: FormData,
+): Promise<TopicActionState> {
+  const topicId = firstString(formData, 'topicId');
+  const verdictText = firstString(formData, 'verdictText');
+  const recommendationText = firstString(formData, 'recommendationText');
+  const premises = firstString(formData, 'premises');
+  const note = firstString(formData, 'note');
+  const adoptedClaimIds = formData
+    .getAll('adoptedClaimId')
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean);
+  const acknowledgedChallengeIds = formData
+    .getAll('acknowledgedChallengeId')
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean);
+  if (!topicId || !verdictText || adoptedClaimIds.length === 0) {
+    return { error: '请先选择采纳条目并填写结论' };
+  }
+
+  const user = await resolveParticipant(
+    `/topics/${encodeURIComponent(topicId)}?tab=conclusion`,
+  );
+
+  try {
+    await publishConclusionService({
+      topicId,
+      actorId: user.id,
+      verdictText,
+      recommendationText,
+      premises,
+      note,
+      adoptedClaimIds,
+      acknowledgedChallengeIds,
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  redirect(`/topics/${encodeURIComponent(topicId)}?tab=conclusion`);
+}
+
+/** 立场变更向导：公开“我改主意了”并附证词；说服来源可选。 */
+export async function recordStanceChangeAction(
+  _prev: TopicActionState,
+  formData: FormData,
+): Promise<TopicActionState> {
+  const topicId = firstString(formData, 'topicId');
+  const rawTab = firstString(formData, 'tab') || 'arena';
+  const tab = isTopicView(rawTab) ? rawTab : 'arena';
+  const fromStance = firstString(formData, 'fromStance');
+  const toStance = firstString(formData, 'toStance');
+  const statement = firstString(formData, 'statement');
+  const sourceClaimId = firstString(formData, 'sourceClaimId');
+  if (!topicId || !fromStance || !toStance || !statement) {
+    return { error: '请填写原立场、新立场与证词' };
+  }
+
+  const user = await resolveParticipant(
+    `/topics/${encodeURIComponent(topicId)}?tab=${encodeURIComponent(tab)}`,
+  );
+
+  try {
+    await recordStanceChangeService({
+      topicId,
+      userId: user.id,
+      fromStance,
+      toStance,
+      statement,
+      sourceClaimId: sourceClaimId || null,
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  redirect(`/topics/${encodeURIComponent(topicId)}?tab=${encodeURIComponent(tab)}`);
 }
