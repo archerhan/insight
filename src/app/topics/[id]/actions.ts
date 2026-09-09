@@ -14,6 +14,10 @@ import {
   type NodeWriteOutcome,
 } from '@/db/services/rebuttal';
 import { publishConclusion as publishConclusionService } from '@/db/services/conclusion';
+import {
+  placePrediction as placePredictionService,
+  respondToFollowup as respondToFollowupService,
+} from '@/db/services/predictions';
 import { recordStanceChange as recordStanceChangeService } from '@/db/services/stance';
 import { getUserById } from '@/db/services/users';
 import { loginHref } from '@/lib/auth/url';
@@ -331,4 +335,62 @@ export async function recordStanceChangeAction(
     return { error: errorMessage(error) };
   }
   redirect(`/topics/${encodeURIComponent(topicId)}?tab=${encodeURIComponent(tab)}`);
+}
+
+/** 立帖为证登记：登录即可（记录级战绩，不开放可花费币），一人一话题一次。 */
+export async function placePredictionAction(
+  _prev: TopicActionState,
+  formData: FormData,
+): Promise<TopicActionState> {
+  const topicId = firstString(formData, 'topicId');
+  const statement = firstString(formData, 'statement');
+  const predictedOutcome = firstString(formData, 'predictedOutcome');
+  if (!topicId || !statement || !predictedOutcome) {
+    return { error: '请填写押注原话并选择方向' };
+  }
+
+  const callbackPath = `/topics/${encodeURIComponent(topicId)}`;
+  const user = await resolveParticipant(callbackPath);
+
+  try {
+    await placePredictionService({
+      topicId,
+      bettorId: user.id,
+      statement,
+      predictedOutcome,
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  redirect(callbackPath);
+}
+
+/** 楼主回访揭晓：写入 reality_check 并批量结算该话题押注。 */
+export async function respondFollowupAction(
+  _prev: TopicActionState,
+  formData: FormData,
+): Promise<TopicActionState> {
+  const topicId = firstString(formData, 'topicId');
+  const waveRaw = firstString(formData, 'wave');
+  const regretLevel = firstString(formData, 'regretLevel');
+  const wave = Number.parseInt(waveRaw, 10);
+  if (!topicId || !Number.isInteger(wave) || wave <= 0 || !regretLevel) {
+    return { error: '缺少回访信息' };
+  }
+
+  const user = await resolveParticipant(
+    `/topics/${encodeURIComponent(topicId)}?tab=conclusion`,
+  );
+
+  try {
+    await respondToFollowupService({
+      topicId,
+      userId: user.id,
+      wave,
+      regretLevel,
+    });
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+  redirect(`/topics/${encodeURIComponent(topicId)}?tab=conclusion`);
 }

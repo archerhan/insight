@@ -7,16 +7,33 @@ import { TopicArenaView } from '@/components/arena/topic-arena-view';
 import { ConclusionContent } from '@/components/conclusion/conclusion-content';
 import { ConclusionWizard } from '@/components/conclusion/conclusion-wizard';
 import { StanceChangeWizard } from '@/components/conclusion/stance-change-wizard';
+import { FollowupPrompt } from '@/components/predictions/followup-prompt';
+import {
+  PredictionPanel,
+  type PredictionPanelProps,
+  type PredictionUserRecord,
+} from '@/components/predictions/prediction-panel';
 import { getArenaView } from '@/db/services/arena';
 import {
   getAdoptionDraftContext,
   getConclusionView,
 } from '@/db/services/conclusion';
+import {
+  getPendingFollowup,
+  getTopicPredictionContext,
+  type TopicPredictionContext,
+} from '@/db/services/predictions';
 import { listStanceSourceClaims } from '@/db/services/stance';
 import { getPublicTopicDetail } from '@/db/services/topics';
 import { getCurrentUser } from '@/lib/auth/current-user';
 import { loginHref } from '@/lib/auth/url';
 import { resolveTopicView } from '@/lib/navigation/topic-view';
+import {
+  isPredictionOutcome,
+  outcomeLabel,
+  predictionChipMeta,
+  realityResultLabel,
+} from '@/lib/domain/predictions';
 import { TOPIC_TYPE_LABELS } from '@/lib/domain/publish';
 
 export const dynamic = 'force-dynamic';
@@ -87,6 +104,47 @@ function StatItem({
   );
 }
 
+function predictionPanelProps(
+  topicId: string,
+  ctx: TopicPredictionContext,
+  loginHref: string | null,
+  now: Date = new Date(),
+): PredictionPanelProps {
+  const userRecord: PredictionUserRecord | null = ctx.userPrediction
+    ? (() => {
+        const outcome = isPredictionOutcome(ctx.userPrediction!.predictedOutcome)
+          ? ctx.userPrediction!.predictedOutcome
+          : 'no_regret';
+        const chip = predictionChipMeta(ctx.userPrediction!.status, ctx.revealAt, now);
+        return {
+          statement: ctx.userPrediction!.statement,
+          outcomeLabel: outcomeLabel(outcome),
+          chipLabel: chip.label,
+          chipTone: chip.tone,
+          createdAtLabel: ctx.userPrediction!.createdAt.toLocaleDateString('zh-CN'),
+        };
+      })()
+    : null;
+  return {
+    topicId,
+    revealAt: ctx.revealAt?.toISOString() ?? null,
+    openCount: ctx.openCount,
+    openCap: ctx.perTopicOpenCap,
+    regretOpenCount: ctx.regretOpenCount,
+    noRegretOpenCount: ctx.noRegretOpenCount,
+    settled: ctx.settled,
+    realityResultLabel: ctx.realityResult ? realityResultLabel(ctx.realityResult) : null,
+    userPrediction: userRecord,
+    gateError: ctx.gateError,
+    canRegister: loginHref === null && ctx.gateError === null && !ctx.settled,
+    loginHref,
+  };
+}
+
+function followupIsDue(dueAt: Date): boolean {
+  return dueAt.getTime() <= Date.now();
+}
+
 function PlaceholderCard({
   title,
   children,
@@ -124,9 +182,13 @@ export default async function TopicPage({ params, searchParams }: TopicPageParam
   const view = resolveTopicView(query, fallbackView);
 
   const arenaData = view === 'arena' ? arenaInParallel : null;
-  const [conclusionData, adoptionCtx] = await Promise.all([
+  const [conclusionData, adoptionCtx, predictionCtx, ownerFollowup] = await Promise.all([
     wantConclusionInParallel ? getConclusionView(id) : Promise.resolve(null),
     wantConclusionInParallel ? getAdoptionDraftContext(id) : Promise.resolve(null),
+    topic.stakeEnabled ? getTopicPredictionContext(id, user?.id ?? null) : Promise.resolve(null),
+    topic.status !== 'open' && user?.id === topic.ownerId
+      ? getPendingFollowup(id, user.id)
+      : Promise.resolve(null),
   ]);
 
   // 对线/结论书视图内为当前用户准备“我改主意了”的来源候选（仅登录用户）。
@@ -197,6 +259,25 @@ export default async function TopicPage({ params, searchParams }: TopicPageParam
           )}
         </div>
       </div>
+
+      {predictionCtx && (
+        <PredictionPanel
+          {...predictionPanelProps(
+            topic.id,
+            predictionCtx,
+            user ? null : loginHref(`/topics/${encodeURIComponent(topic.id)}`),
+          )}
+        />
+      )}
+
+      {ownerFollowup && (
+        <FollowupPrompt
+          topicId={ownerFollowup.topicId}
+          wave={ownerFollowup.wave}
+          dueAt={ownerFollowup.dueAt.toISOString()}
+          overdue={followupIsDue(ownerFollowup.dueAt)}
+        />
+      )}
 
       {view === 'arena' && arenaData && (
         <div className="mt-6">

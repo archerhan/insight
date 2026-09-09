@@ -14,11 +14,16 @@ import {
   claims,
   conclusionItems,
   conclusionVersions,
+  decisionFollowups,
   evidence,
+  notifications,
+  predictions,
+  realityChecks,
   reputationEvents,
   stanceChanges,
   topics,
   users,
+  userStats,
 } from '../schema';
 
 const connectionString = process.env.TEST_DATABASE_URL;
@@ -44,6 +49,9 @@ describeDb('结论书服务（集成）', () => {
 
   afterAll(async () => {
     for (const topicId of topicIds) {
+      await db.delete(decisionFollowups).where(eq(decisionFollowups.topicId, topicId));
+      await db.delete(predictions).where(eq(predictions.topicId, topicId));
+      await db.delete(realityChecks).where(eq(realityChecks.topicId, topicId));
       const claimRows = await db
         .select({ id: claims.id })
         .from(claims)
@@ -69,6 +77,10 @@ describeDb('结论书服务（集成）', () => {
       await db.delete(challenges).where(eq(challenges.topicId, topicId));
       await db.delete(claims).where(eq(claims.topicId, topicId));
       await db.delete(topics).where(eq(topics.id, topicId));
+    }
+    if (userIds.length > 0) {
+      await db.delete(notifications).where(inArray(notifications.userId, userIds));
+      await db.delete(userStats).where(inArray(userStats.userId, userIds));
     }
     await db.delete(users).where(like(users.authId, `%${nonce}%`));
     await pg.end();

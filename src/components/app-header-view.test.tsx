@@ -60,4 +60,33 @@ describe('全局顶栏', () => {
     );
     expect(screen.queryByText('辩')).toBeNull();
   });
+
+  it('未登录不展示通知入口', () => {
+    render(<AppHeaderView user={null} />);
+    expect(screen.queryByRole('link', { name: /通知/ })).toBeNull();
+  });
+
+  it('已登录且有未读时展示铃铛徽标', () => {
+    render(
+      <AppHeaderView
+        user={{ displayName: '明', avatarUrl: null }}
+        unreadNotifications={3}
+      />,
+    );
+    expect(
+      screen.getByRole('link', { name: '通知，3 条未读' }).getAttribute('href'),
+    ).toBe('/notifications');
+    expect(screen.getByText('3')).toBeTruthy();
+  });
+
+  it('没有未读时不显示数字徽标', () => {
+    render(
+      <AppHeaderView
+        user={{ displayName: '明', avatarUrl: null }}
+        unreadNotifications={0}
+      />,
+    );
+    expect(screen.getByRole('link', { name: '通知' })).toBeTruthy();
+    expect(screen.queryByText('0')).toBeNull();
+  });
 });

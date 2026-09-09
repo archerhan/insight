@@ -22,6 +22,8 @@ import {
 import { canTransition, type ClaimStatus } from '@/lib/domain/states';
 import type { TopicType } from '@/lib/domain/publish';
 import { getUnresolvedChallenges, type UnresolvedChallenge } from './arena';
+import { createFollowupInTx } from './predictions';
+import { refreshUserStatsInTx } from './stats';
 
 /**
  * M4 结论书写/读服务：
@@ -209,7 +211,7 @@ export async function publishConclusion(
   input: PublishConclusionInput,
 ): Promise<{ version: VersionRow }> {
   return db.transaction(async (tx) => {
-    await assertOwnerCanCloseInTx(tx, input.topicId, input.actorId);
+    const topic = await assertOwnerCanCloseInTx(tx, input.topicId, input.actorId);
 
     const draftErrors = validateConclusionDraft({
       verdictText: input.verdictText,
@@ -364,6 +366,20 @@ export async function publishConclusion(
         updatedAt: now,
       })
       .where(eq(topics.id, input.topicId));
+
+    // 个人决策话题发布结论书后生成 T+30 回访行（worker 到期发站内提醒）。
+    if (topic.type === 'decision') {
+      await createFollowupInTx(tx, {
+        topicId: input.topicId,
+        userId: input.actorId,
+        wave: 30,
+        dueAt: new Date(now.getTime() + 30 * 86_400_000),
+      });
+    }
+    // 采纳作者战绩刷新（贡献计数来自结论书条目，落 user_stats 供速览）。
+    for (const authorId of new Set(adopted.map((claim) => claim.authorId))) {
+      await refreshUserStatsInTx(tx, authorId);
+    }
 
     return { version };
   });

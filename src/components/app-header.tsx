@@ -1,4 +1,5 @@
 import { getCurrentUser } from '@/lib/auth/current-user';
+import { getUnreadNotificationCount } from '@/db/services/notifications';
 import { AppHeaderView, type AppHeaderUser } from './app-header-view';
 
 /**
@@ -10,5 +11,6 @@ export async function AppHeader() {
   const headerUser: AppHeaderUser | null = user
     ? { displayName: user.displayName, avatarUrl: user.avatarUrl }
     : null;
-  return <AppHeaderView user={headerUser} />;
+  const unreadNotifications = user ? await getUnreadNotificationCount(user.id) : 0;
+  return <AppHeaderView user={headerUser} unreadNotifications={unreadNotifications} />;
 }

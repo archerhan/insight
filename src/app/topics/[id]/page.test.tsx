@@ -30,6 +30,11 @@ vi.mock('@/db/services/stance', () => ({
   listStanceSourceClaims: vi.fn(),
 }));
 
+vi.mock('@/db/services/predictions', () => ({
+  getTopicPredictionContext: vi.fn(),
+  getPendingFollowup: vi.fn(),
+}));
+
 vi.mock('@/lib/auth/current-user', () => ({
   getCurrentUser: vi.fn(),
 }));
@@ -43,6 +48,8 @@ vi.mock('@/app/topics/[id]/actions', () => ({
   rescueMigrateAction: vi.fn(),
   publishConclusionAction: vi.fn(),
   recordStanceChangeAction: vi.fn(),
+  placePredictionAction: vi.fn(),
+  respondFollowupAction: vi.fn(),
 }));
 
 import { getPublicTopicDetail } from '@/db/services/topics';
@@ -52,6 +59,7 @@ import {
   getConclusionView,
 } from '@/db/services/conclusion';
 import { listStanceSourceClaims } from '@/db/services/stance';
+import { getPendingFollowup, getTopicPredictionContext } from '@/db/services/predictions';
 import { getCurrentUser } from '@/lib/auth/current-user';
 import TopicPage from './page';
 
@@ -60,6 +68,8 @@ const getArenaViewMock = vi.mocked(getArenaView);
 const getConclusionViewMock = vi.mocked(getConclusionView);
 const getAdoptionDraftContextMock = vi.mocked(getAdoptionDraftContext);
 const listStanceSourceClaimsMock = vi.mocked(listStanceSourceClaims);
+const getTopicPredictionContextMock = vi.mocked(getTopicPredictionContext);
+const getPendingFollowupMock = vi.mocked(getPendingFollowup);
 const getCurrentUserMock = vi.mocked(getCurrentUser);
 
 function topicFixture(overrides: Record<string, unknown> = {}) {
@@ -264,6 +274,27 @@ function adoptionCtxFixture(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function predictionCtxFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    stakeEnabled: true,
+    topicStatus: 'open',
+    topicType: 'decision',
+    topicOwnerId: 'u-owner',
+    revealAt: new Date('2026-12-06T00:00:00Z'),
+    openCount: 2,
+    totalCount: 2,
+    perTopicOpenCap: 20,
+    perTopicTotalCap: 60,
+    regretOpenCount: 1,
+    noRegretOpenCount: 1,
+    settled: false,
+    realityResult: null,
+    userPrediction: null,
+    gateError: null,
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   notFoundMock.mockClear();
   useSearchParamsMock.mockReturnValue(new URLSearchParams());
@@ -273,6 +304,10 @@ beforeEach(() => {
   getAdoptionDraftContextMock.mockReset();
   listStanceSourceClaimsMock.mockReset();
   listStanceSourceClaimsMock.mockResolvedValue([]);
+  getTopicPredictionContextMock.mockReset();
+  getTopicPredictionContextMock.mockResolvedValue(predictionCtxFixture() as never);
+  getPendingFollowupMock.mockReset();
+  getPendingFollowupMock.mockResolvedValue(null as never);
   getCurrentUserMock.mockReset();
 });
 
@@ -428,5 +463,54 @@ describe('议题页（M3：对线视图接入）', () => {
         searchParams: Promise.resolve({}),
       }),
     ).rejects.toThrow('NEXT_NOT_FOUND');
+  });
+
+  it('开启立帖为证的话题展示登记面板，未登录给登录引导', async () => {
+    getPublicTopicDetailMock.mockResolvedValueOnce(topicFixture() as never);
+    getArenaViewMock.mockResolvedValueOnce(arenaFixture() as never);
+    getCurrentUserMock.mockResolvedValueOnce(null as never);
+
+    render(
+      await TopicPage({
+        params: Promise.resolve({ id: 'topic-1' }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(screen.getByRole('heading', { name: '立帖为证' })).toBeTruthy();
+    expect(screen.getByText(/2 人登记/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: '登录后立帖为证' })).toBeTruthy();
+  });
+
+  it('楼主看到 T+30 回访提示条（已到期可作答）', async () => {
+    getPublicTopicDetailMock.mockResolvedValueOnce(
+      topicFixture({ status: 'converged' }) as never,
+    );
+    getConclusionViewMock.mockResolvedValueOnce(conclusionFixture() as never);
+    getCurrentUserMock.mockResolvedValueOnce({
+      id: 'u-owner',
+      courseCompletedAt: new Date(),
+    } as never);
+    getPendingFollowupMock.mockResolvedValueOnce({
+      id: 'followup-1',
+      topicId: 'topic-1',
+      userId: 'u-owner',
+      wave: 30,
+      dueAt: new Date('2000-01-01T00:00:00Z'),
+      respondedAt: null,
+      regretLevel: null,
+      status: 'pending',
+    } as never);
+
+    render(
+      await TopicPage({
+        params: Promise.resolve({ id: 'topic-1' }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(screen.getByRole('heading', { name: /楼主回访 · T\+30/ })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /后悔了/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '确认并揭晓押注' })).toBeTruthy();
   });
 });

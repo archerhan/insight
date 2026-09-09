@@ -113,3 +113,25 @@ AI_PROGRAM_LLM_MODEL=gpt-4o-mini
 ```
 
 未启用/未配置/调用失败均自动降级为本地启发式结果，不阻塞用户。
+
+## M4 状态（已达成）
+
+- 采纳与出结论书：楼主只可采纳理由层论点（深层须经提升通道），写入 conclusion_items 并冻结 support_chain 快照（作者名一并快照，改名不改写历史导出）；
+- 带险关闭：存在未决反驳时须逐条勾选，topic 落 `risk_closed`，风险快照进 summary_snapshot，结论书视图展示未决风险区；
+- 导出：`/topics/[id]/conclusion.md` 简要版 Markdown（正文 + 采纳理由 + 支撑链 + 未决风险）；
+- 立场变更：`recordStanceChange` 单事务完成 novelty 校验 → stance_changes → claim_events(stance_changed) → 诚实/说服战绩，个人页立场时间线（带证词）已上线；
+- 测试：结论书/立场服务集成用例、动作层、向导/页面用例随 M4 全绿。
+
+## M5 状态（已达成）
+
+第一期业务闭环收尾（战绩、押注最小版与通知）：
+
+- **数据层**：迁移 0001 新增 `predictions` / `reality_checks` / `decision_followups` / `notifications` / `user_stats`（战绩为可重算物化表，源在账本与事件表）；
+- **立帖为证登记**：开启立帖为证的个人决策话题可在话题页登记（一句话押注 + 押后悔/不后悔），一人一话题一次、开放数量封顶、楼主不可自押、揭晓日后截止；`topics.prediction_count` 随登记/作废维护，广场“即将揭晓”继续按公开读展示；
+- **回访与揭晓**：出结论书即在单事务内生成 T+30 `decision_followups`；到期 worker（Cron/读取兜底）幂等发站内提醒；楼主回访作答（没后悔/部分后悔/后悔）→ 写 `reality_check` → 批量结算押注（部分后悔双方作废）→ `prediction_result` 战绩 + 揭晓通知 + claim_events(reality_changed) 留痕；
+- **战绩页**：判断力（押注命中率）、贡献（被采纳/说服）、诚实、裁定权重 1 的计数卡；立场时间线保留；新增“我的话题 / 我的押注”Tab 与战绩派生徽章占位；
+- **通知最小集**：挂红阶段提醒（orange/red/due，幂等）、回访提醒、揭晓提醒与揭晓结果；顶栏铃铛未读角标 + `/notifications` 站内收件列表（一键全部已读）；按 (user, type, dedupe_key) 幂等去重；
+- **worker 入口**：`/api/cron/advance` 现同时推进挑战计时与回访/揭晓提醒；
+- **测试**：领域纯函数 15 条；押注/回访/通知/战绩/worker 的服务集成用例随 CI 测试库运行；组件、页面与动作层用例覆盖登记、回访作答、Tab 切换、通知列表；lint / typecheck / 单测 / build 全绿。
+
+揭晓语义说明：现实的“后悔与否”只有楼主能回答，因此最小版由回访作答触发结算（`reality_checks.decided_by=user`），worker 负责在到期日把“该揭晓了”推给楼主的押注者，而不是伪造自动结论。

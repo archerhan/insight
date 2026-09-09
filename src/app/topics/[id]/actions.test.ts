@@ -29,6 +29,11 @@ vi.mock('@/db/services/tree', () => ({
   reviseClaim: vi.fn(),
 }));
 
+vi.mock('@/db/services/predictions', () => ({
+  placePrediction: vi.fn(),
+  respondToFollowup: vi.fn(),
+}));
+
 import { auth } from '@/auth';
 import { getUserById } from '@/db/services/users';
 import { postSupport, postRebutal, respondToChallenge } from '@/db/services/rebuttal';
@@ -39,12 +44,15 @@ import {
 } from '@/db/services/tree';
 import {
   concedeChallengeAction,
+  placePredictionAction,
   postRebutalAction,
   postSupportAction,
   rescueMigrateAction,
+  respondFollowupAction,
   respondChallengeAction,
   reviseClaimAction,
 } from './actions';
+import { placePrediction, respondToFollowup } from '@/db/services/predictions';
 
 const authMock = vi.mocked(auth);
 const getUserByIdMock = vi.mocked(getUserById);
@@ -54,6 +62,8 @@ const respondMock = vi.mocked(respondToChallenge);
 const concedeMock = vi.mocked(concedeToChallenge);
 const migrateMock = vi.mocked(migrateClaim);
 const reviseMock = vi.mocked(reviseClaim);
+const placePredictionMock = vi.mocked(placePrediction);
+const respondToFollowupMock = vi.mocked(respondToFollowup);
 
 function completedUser() {
   return {
@@ -92,6 +102,8 @@ beforeEach(() => {
   concedeMock.mockReset();
   migrateMock.mockReset();
   reviseMock.mockReset();
+  placePredictionMock.mockReset();
+  respondToFollowupMock.mockReset();
 });
 
 describe('对线动作层', () => {
@@ -267,5 +279,64 @@ describe('对线动作层', () => {
       newParentId: 'claim-new',
       reason: 'rescue_migration',
     });
+  });
+
+  it('placePredictionAction：未登录跳登录页', async () => {
+    authMock.mockResolvedValueOnce(null as never);
+    await expect(
+      placePredictionAction(
+        { error: null },
+        form({ topicId: 'topic-1', statement: '我押你会后悔', predictedOutcome: 'regret' }),
+      ),
+    ).rejects.toThrow('NEXT_REDIRECT');
+    expect(redirectMock).toHaveBeenCalledWith('/login?callbackUrl=%2Ftopics%2Ftopic-1');
+    expect(placePredictionMock).not.toHaveBeenCalled();
+  });
+
+  it('placePredictionAction：成功登记后回到话题页', async () => {
+    authMock.mockResolvedValueOnce({ user: { id: 'u-1' } } as never);
+    getUserByIdMock.mockResolvedValueOnce(completedUser());
+    placePredictionMock.mockResolvedValueOnce({ id: 'pred-1' } as never);
+    await expect(
+      placePredictionAction(
+        { error: null },
+        form({ topicId: 'topic-1', statement: '我押你三个月内会后悔', predictedOutcome: 'regret' }),
+      ),
+    ).rejects.toThrow('NEXT_REDIRECT');
+    expect(placePredictionMock).toHaveBeenCalledWith({
+      topicId: 'topic-1',
+      bettorId: 'u-1',
+      statement: '我押你三个月内会后悔',
+      predictedOutcome: 'regret',
+    });
+    expect(redirectMock).toHaveBeenCalledWith('/topics/topic-1');
+  });
+
+  it('respondFollowupAction：楼主回访成功并跳回结论书视图', async () => {
+    authMock.mockResolvedValueOnce({ user: { id: 'u-1' } } as never);
+    getUserByIdMock.mockResolvedValueOnce(completedUser());
+    respondToFollowupMock.mockResolvedValueOnce({
+      realityCheckId: 'rc-1',
+      followupId: 'f-1',
+      result: 'no_regret',
+      hit: 1,
+      miss: 1,
+      voided: 0,
+    } as never);
+    await expect(
+      respondFollowupAction(
+        { error: null },
+        form({ topicId: 'topic-1', wave: '30', regretLevel: 'no_regret' }),
+      ),
+    ).rejects.toThrow('NEXT_REDIRECT');
+    expect(respondToFollowupMock).toHaveBeenCalledWith({
+      topicId: 'topic-1',
+      userId: 'u-1',
+      wave: 30,
+      regretLevel: 'no_regret',
+    });
+    expect(redirectMock).toHaveBeenCalledWith(
+      '/topics/topic-1?tab=conclusion',
+    );
   });
 });

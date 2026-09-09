@@ -265,6 +265,137 @@ export const conclusionItems = pgTable(
   (table) => [index('conclusion_items_version_idx').on(table.versionId)],
 );
 
+/**
+ * M5 闭环补充表（对应《数据库设计.md》v0.2 的 P1 集合最小列）：
+ * - predictions / reality_checks：立帖为证登记与揭晓（记录级，不开放可花费逻辑币）；
+ * - decision_followups：结论书发布后 T+30/90/180 楼主回访；
+ * - notifications：站内通知最小集（挂红阶段、揭晓/回访提醒）；
+ * - user_stats：战绩速览（源数据在账本/事件表，本表为可重算物化结果）。
+ */
+
+export const realityChecks = pgTable(
+  'reality_checks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    topicId: uuid('topic_id')
+      .notNull()
+      .references(() => topics.id),
+    targetClaimId: uuid('target_claim_id').references(() => claims.id),
+    kind: text('kind').notNull().default('decision'), // decision | claim
+    result: text('result').notNull(), // regret | no_regret | partial | void | affirmed | refuted
+    decidedBy: text('decided_by').notNull().default('user'), // auto | user | jury
+    evidenceNote: text('evidence_note'),
+    sourceUrl: text('source_url'),
+    decidedAt: timestamp('decided_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('reality_checks_topic_idx').on(table.topicId)],
+);
+
+export const predictions = pgTable(
+  'predictions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    topicId: uuid('topic_id')
+      .notNull()
+      .references(() => topics.id),
+    bettorId: uuid('bettor_id')
+      .notNull()
+      .references(() => users.id),
+    targetType: text('target_type').notNull().default('decision'), // decision | claim
+    targetClaimId: uuid('target_claim_id').references(() => claims.id),
+    statement: text('statement').notNull(),
+    predictedOutcome: text('predicted_outcome').notNull(), // regret | no_regret
+    amount: bigint('amount', { mode: 'number' }).notNull().default(0),
+    multiplier: numeric('multiplier', { precision: 6, scale: 2 }).notNull().default('1'),
+    status: text('status').notNull().default('open'), // open | hit | miss | void
+    realityCheckId: uuid('reality_check_id').references(() => realityChecks.id),
+    payout: bigint('payout', { mode: 'number' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('predictions_topic_bettor_idx').on(table.topicId, table.bettorId),
+    index('predictions_bettor_idx').on(table.bettorId),
+    index('predictions_topic_status_idx').on(table.topicId, table.status),
+  ],
+);
+
+export const decisionFollowups = pgTable(
+  'decision_followups',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    topicId: uuid('topic_id')
+      .notNull()
+      .references(() => topics.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    wave: integer('wave').notNull(), // 30 / 90 / 180
+    dueAt: timestamp('due_at', { withTimezone: true }).notNull(),
+    respondedAt: timestamp('responded_at', { withTimezone: true }),
+    regretLevel: text('regret_level'),
+    mostValuableClaimId: uuid('most_valuable_claim_id').references(() => claims.id),
+    status: text('status').notNull().default('pending'), // pending | done | skipped
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('decision_followups_topic_wave_idx').on(table.topicId, table.wave),
+    index('decision_followups_due_idx').on(table.dueAt, table.status),
+  ],
+);
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    type: text('type').notNull(), // challenge_timer | reveal_reminder | followup_due | reveal_result ...
+    dedupeKey: text('dedupe_key'),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>(),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('notifications_user_type_key_idx').on(
+      table.userId,
+      table.type,
+      table.dedupeKey,
+    ),
+    index('notifications_user_read_idx').on(table.userId, table.readAt),
+  ],
+);
+
+export const userStats = pgTable(
+  'user_stats',
+  {
+    userId: uuid('user_id')
+      .primaryKey()
+      .references(() => users.id),
+    judgmentScore: numeric('judgment_score', { precision: 5, scale: 2 }),
+    predictionHit: integer('prediction_hit').notNull().default(0),
+    predictionTotal: integer('prediction_total').notNull().default(0),
+    contributionCount: integer('contribution_count').notNull().default(0),
+    persuasionCount: integer('persuasion_count').notNull().default(0),
+    honestyCount: integer('honesty_count').notNull().default(0),
+    abandonCount: integer('abandon_count').notNull().default(0),
+    adjudicatorWeight: numeric('adjudicator_weight', { precision: 4, scale: 2 })
+      .notNull()
+      .default('1'),
+    calibrationRate: numeric('calibration_rate', { precision: 5, scale: 2 }),
+    driftLevel: text('drift_level').notNull().default('low'),
+    openPenalties: integer('open_penalties').notNull().default(0),
+    decisionScore: numeric('decision_score', { precision: 5, scale: 2 }),
+    riskClosuresTotal: integer('risk_closures_total').notNull().default(0),
+    riskClosuresValidated: integer('risk_closures_validated').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+);
+
 export const aiFlags = pgTable('ai_flags', {
   id: uuid('id').primaryKey().defaultRandom(),
   claimId: uuid('claim_id').references(() => claims.id),

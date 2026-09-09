@@ -1,7 +1,8 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db, type DbTx } from '@/db/client';
-import { challenges, claimEvents } from '@/db/schema';
+import { challenges, claimEvents, claims } from '@/db/schema';
 import { challengePhaseAt, type ChallengePhase } from '@/lib/domain/challenges';
+import { notifyInTx } from './notifications';
 
 /**
  * 3/7/14 天计时推进（Vercel Cron 每日调用 + 后续读取路径的惰性兜底）。
@@ -30,6 +31,29 @@ async function advanceRowsInTx(
   now: Date,
   rows: Array<{ id: string; topicId: string; targetClaimId: string; openedAt: Date }>,
 ): Promise<TimerAdvanceResult[]> {
+  const targetIds = [...new Set(rows.map((row) => row.targetClaimId))];
+  const targetRows = targetIds.length
+    ? await tx
+        .select({ id: claims.id, authorId: claims.authorId, contentTitle: claims.contentTitle })
+        .from(claims)
+        .where(inArray(claims.id, targetIds))
+    : [];
+  const targetById = new Map(targetRows.map((row) => [row.id, row]));
+  const phaseNotify: Record<ChallengePhase, { title: string; body: string }> = {
+    orange: {
+      title: '你的论点被反驳后已进入橙色提醒',
+      body: '对方反驳已 3 天未得到回应，尽快正面回应或承认击穿。',
+    },
+    red: {
+      title: '你的论点被反驳后已进入红色警示',
+      body: '未回应反驳已满 7 天，结论书展示时会被降权。',
+    },
+    due: {
+      title: '你的论点反驳已到期（14 天）',
+      body: '若你仍活跃未回应，对方可申请“默认判负”（需轻陪审确认）。',
+    },
+    open: { title: '', body: '' },
+  };
   const results: TimerAdvanceResult[] = [];
   for (const challenge of rows) {
     const phase = challengePhaseAt(now.toISOString(), challenge.openedAt.toISOString());
@@ -60,6 +84,23 @@ async function advanceRowsInTx(
           type: 'challenge_timer',
           detail: { challengeId: challenge.id, phase: phaseToLog, loggedAt: now.toISOString() },
         });
+        const target = targetById.get(challenge.targetClaimId);
+        if (target?.authorId) {
+          await notifyInTx(tx, {
+            userId: target.authorId,
+            type: 'challenge_timer',
+            title: phaseNotify[phaseToLog].title,
+            body: phaseNotify[phaseToLog].body,
+            dedupeKey: `challenge_timer:${challenge.id}:${phaseToLog}`,
+            payload: {
+              challengeId: challenge.id,
+              topicId: challenge.topicId,
+              claimId: challenge.targetClaimId,
+              claimTitle: target.contentTitle,
+              phase: phaseToLog,
+            },
+          });
+        }
         eventWritten = true;
       }
     }

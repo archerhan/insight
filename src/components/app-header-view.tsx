@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut, Scale } from 'lucide-react';
+import { Bell, LogOut, Scale } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { signOutAction } from '@/app/actions/auth';
@@ -12,12 +12,17 @@ export interface AppHeaderUser {
   avatarUrl: string | null;
 }
 
+export interface AppHeaderViewProps {
+  user: AppHeaderUser | null;
+  unreadNotifications?: number;
+}
+
 const NAV_ITEMS = [
   { href: '/', label: '广场' },
   { href: '/me', label: '我的战绩' },
 ] as const;
 
-export function AppHeaderView({ user }: { user: AppHeaderUser | null }) {
+export function AppHeaderView({ user, unreadNotifications = 0 }: AppHeaderViewProps) {
   const pathname = usePathname();
 
   return (
@@ -56,6 +61,19 @@ export function AppHeaderView({ user }: { user: AppHeaderUser | null }) {
           </Link>
           {user ? (
             <div className="flex items-center gap-1.5">
+              <Link
+                href="/notifications"
+                aria-label={unreadNotifications > 0 ? `通知，${unreadNotifications} 条未读` : '通知'}
+                className="relative grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                title="通知"
+              >
+                <Bell className="size-4" aria-hidden="true" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-con px-1 text-[10px] font-medium leading-4 text-white">
+                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                  </span>
+                )}
+              </Link>
               <span
                 className="flex items-center gap-2 rounded-full py-0.5 pl-0.5 pr-2 text-sm text-muted-foreground"
                 title={user.displayName}
