@@ -149,8 +149,9 @@ jobs:
           ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p '$SSH_APP_DIR/docker'"
           scp -i ~/.ssh/id_deploy -P "$SSH_PORT" \
             docker-compose.yml "$SSH_USER@$SSH_HOST:$SSH_APP_DIR/docker-compose.yml"
-          scp -i ~/.ssh/id_deploy -P "$SSH_PORT" \
-            docker/scheduler.mjs "$SSH_USER@$SSH_HOST:$SSH_APP_DIR/docker/scheduler.mjs"
+          # 整个 docker/ 目录一起同步（含 scheduler.mjs 与 nginx 配置）
+          scp -i ~/.ssh/id_deploy -P "$SSH_PORT" -r \
+            docker "$SSH_USER@$SSH_HOST:$SSH_APP_DIR/"
 
       - name: 拉取镜像并重启服务
         if: steps.check.outputs.enabled == 'true'
@@ -162,10 +163,13 @@ jobs:
           APP_IMAGE: ${{ needs.build.outputs.app_image }}
           MIGRATE_IMAGE: ${{ needs.build.outputs.migrate_image }}
           SCHEDULER_IMAGE: ${{ needs.build.outputs.app_image }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
             APP_IMAGE="$APP_IMAGE" MIGRATE_IMAGE="$MIGRATE_IMAGE" SCHEDULER_IMAGE="$SCHEDULER_IMAGE" APP_DIR="$SSH_APP_DIR" \
+            ACR_USERNAME="$ACR_USERNAME" ACR_PASSWORD="$ACR_PASSWORD" \
             'bash -s' <<'REMOTE'
           set -euo pipefail
           cd "$APP_DIR"
@@ -174,6 +178,12 @@ jobs:
             exit 1
           fi
           export APP_IMAGE MIGRATE_IMAGE SCHEDULER_IMAGE
+          # 服务器只需一次登录即可长期拉取；这里每次发布都补齐，避免凭证过期后卡住
+          if [ -n "${ACR_PASSWORD:-}" ]; then
+            for ref in "$APP_IMAGE" "$MIGRATE_IMAGE" "$SCHEDULER_IMAGE"; do
+              echo "$ACR_PASSWORD" | docker login --username "$ACR_USERNAME" --password-stdin "${ref%%/*}" >/dev/null
+            done
+          fi
           docker compose --env-file .env.production pull app migrate scheduler
           docker compose --env-file .env.production up -d --no-build
           docker image prune -f

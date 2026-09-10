@@ -112,5 +112,36 @@ services:
     restart: unless-stopped
     logging: *logging
 
+  # ---- 以下两个服务属于 edge 档：证书签发完成后用 COMPOSE_PROFILES=edge 启用 ----
+  # Nginx 反向代理：80 跳转 + ACME 校验，443 转发到 app:3000
+  web:
+    image: ${NGINX_IMAGE:-nginx:alpine}
+    profiles: ["edge"]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot-conf:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+    depends_on:
+      app:
+        condition: service_started
+    logging: *logging
+
+  # Let's Encrypt 自动续期：每 12 小时检查一次，证书走 webroot 校验
+  certbot:
+    image: ${CERTBOT_IMAGE:-certbot/certbot}
+    profiles: ["edge"]
+    restart: unless-stopped
+    volumes:
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
+    logging: *logging
+
 volumes:
   db-data:
+  certbot-conf:
+  certbot-www:
