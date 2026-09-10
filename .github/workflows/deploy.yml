@@ -63,6 +63,9 @@ jobs:
           target: runner
           platforms: linux/amd64
           push: true
+          # ACR 个人版不接受 buildx 默认附带的 OCI 证明清单
+          # （denied: unknown manifest class for application/vnd.oci.empty.v1+json）
+          provenance: false
           tags: |
             ${{ steps.meta.outputs.app_image }}
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/debate:latest
@@ -76,6 +79,7 @@ jobs:
           target: migrator
           platforms: linux/amd64
           push: true
+          provenance: false
           tags: |
             ${{ steps.meta.outputs.migrate_image }}
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/debate:latest-migrate
@@ -100,9 +104,16 @@ jobs:
         id: check
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
-          if [ -z "${SSH_HOST:-}" ]; then
-            echo "::notice::未配置 SSH_HOST，跳过自动部署；镜像已推送到 ACR，可在服务器手动拉取"
+          missing=""
+          for name in SSH_HOST SSH_USER SSH_KEY; do
+            eval "value=\${$name:-}"
+            [ -n "$value" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice::未配置$missing，跳过自动部署；镜像仍会推送到 ACR"
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=true" >> "$GITHUB_OUTPUT"

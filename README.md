@@ -85,6 +85,7 @@ APP_ENV_FILE=.env.production docker compose --env-file .env.production up -d --n
 
 ```bash
 pnpm lint
+pnpm typegen                   # 生成 .next/types 里的全局类型（LayoutProps 等），typecheck 依赖它
 pnpm typecheck
 pnpm test                      # 单元测试；设置 TEST_DATABASE_URL 后自动加入 DB 集成用例
 pnpm test:coverage             # 全仓行覆盖率门槛 ≥70%（CI 跑在 Postgres 测试库上）

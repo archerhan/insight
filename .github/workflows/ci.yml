@@ -40,6 +40,9 @@ jobs:
       - name: 迁移测试库
         run: pnpm db:migrate
       - run: pnpm lint
+      # LayoutProps/PageProps 等全局类型由 Next 生成在 .next/types，
+      # 干净环境里必须先 typegen，否则 tsc 报 "Cannot find name 'LayoutProps'"
+      - run: pnpm typegen
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm test:coverage
