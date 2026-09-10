@@ -131,11 +131,7 @@ jobs:
           ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
         run: |
           set -euo pipefail
-          REPO="$ACR_REGISTRY/$ACR_NAMESPACE/debate"
-          {
-            echo "app_image=$REPO:$RELEASE_SHA"
-            echo "migrate_image=$REPO:$RELEASE_SHA-migrate"
-          } >> "$GITHUB_OUTPUT"
+          echo "app_repo=$ACR_NAMESPACE/debate" >> "$GITHUB_OUTPUT"
 
       - name: 准备 SSH
         if: steps.check.outputs.enabled == 'true'
@@ -173,16 +169,17 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
           SSH_APP_DIR: ${{ secrets.SSH_APP_DIR || '/opt/debate' }}
-          APP_IMAGE: ${{ steps.meta.outputs.app_image }}
-          MIGRATE_IMAGE: ${{ steps.meta.outputs.migrate_image }}
-          SCHEDULER_IMAGE: ${{ steps.meta.outputs.app_image }}
+          APP_REPO: ${{ steps.meta.outputs.app_repo }}
           ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
           ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+          ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
+          ACR_REGISTRY_VPC: ${{ secrets.ACR_REGISTRY_VPC }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
-            APP_IMAGE="$APP_IMAGE" MIGRATE_IMAGE="$MIGRATE_IMAGE" SCHEDULER_IMAGE="$SCHEDULER_IMAGE" APP_DIR="$SSH_APP_DIR" \
+            APP_DIR="$SSH_APP_DIR" APP_REPO="$APP_REPO" RELEASE_SHA="$RELEASE_SHA" \
             ACR_USERNAME="$ACR_USERNAME" ACR_PASSWORD="$ACR_PASSWORD" \
+            ACR_REGISTRY="$ACR_REGISTRY" ACR_REGISTRY_VPC="$ACR_REGISTRY_VPC" \
             'bash -s' <<'REMOTE'
           set -euo pipefail
           cd "$APP_DIR"
@@ -190,11 +187,38 @@ jobs:
             echo "缺少 $APP_DIR/.env.production，请先按 deploy/server-setup.md 创建" >&2
             exit 1
           fi
+
+          # ACR 个人版内网端点：主域名前插入 -vpc（未显式配置时推导）
+          if [ -z "${ACR_REGISTRY_VPC:-}" ] && [ -n "${ACR_REGISTRY:-}" ]; then
+            case "$ACR_REGISTRY" in
+              *.*) ACR_REGISTRY_VPC="${ACR_REGISTRY%%.*}-vpc.${ACR_REGISTRY#*.}" ;;
+            esac
+          fi
+
+          # 优先内网端点（同地域、免公网流量、更快），不可达时回退公网端点
+          pick_registry() {
+            for candidate in "$ACR_REGISTRY_VPC" "$ACR_REGISTRY"; do
+              [ -n "$candidate" ] || continue
+              code=$(curl -s -o /dev/null -m 5 -w '%{http_code}' "https://$candidate/v2/" || true)
+              if [ -n "$code" ] && [ "$code" != "000" ]; then
+                printf '%s' "$candidate"
+                return 0
+              fi
+            done
+            printf '%s' "$ACR_REGISTRY"
+          }
+          REGISTRY="$(pick_registry)"
+          APP_IMAGE="$REGISTRY/$APP_REPO:$RELEASE_SHA"
+          MIGRATE_IMAGE="$REGISTRY/$APP_REPO:$RELEASE_SHA-migrate"
+          SCHEDULER_IMAGE="$APP_IMAGE"
+          echo "本次发布使用的仓库：$REGISTRY"
           export APP_IMAGE MIGRATE_IMAGE SCHEDULER_IMAGE
+
           # 服务器只需一次登录即可长期拉取；这里每次发布都补齐，避免凭证过期后卡住
           if [ -n "${ACR_PASSWORD:-}" ]; then
-            for ref in "$APP_IMAGE" "$MIGRATE_IMAGE" "$SCHEDULER_IMAGE"; do
-              echo "$ACR_PASSWORD" | docker login --username "$ACR_USERNAME" --password-stdin "${ref%%/*}" >/dev/null
+            for host in "$REGISTRY" "$ACR_REGISTRY"; do
+              [ -n "$host" ] || continue
+              echo "$ACR_PASSWORD" | docker login --username "$ACR_USERNAME" --password-stdin "$host"
             done
           fi
           docker compose --env-file .env.production pull app migrate scheduler
