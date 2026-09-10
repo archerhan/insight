@@ -21,9 +21,6 @@ jobs:
   build:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    outputs:
-      app_image: ${{ steps.meta.outputs.app_image }}
-      migrate_image: ${{ steps.meta.outputs.migrate_image }}
     steps:
       - name: 计算镜像地址
         id: meta
@@ -124,6 +121,22 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      # 镜像地址在部署任务内部重算：跨任务的 job outputs 一旦包含密钥派生内容，
+      # GitHub 会以 "Skip output ... since it may contain secret" 丢弃。
+      - name: 计算镜像地址
+        id: meta
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
+          ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
+        run: |
+          set -euo pipefail
+          REPO="$ACR_REGISTRY/$ACR_NAMESPACE/debate"
+          {
+            echo "app_image=$REPO:$RELEASE_SHA"
+            echo "migrate_image=$REPO:$RELEASE_SHA-migrate"
+          } >> "$GITHUB_OUTPUT"
+
       - name: 准备 SSH
         if: steps.check.outputs.enabled == 'true'
         env:
@@ -160,9 +173,9 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
           SSH_APP_DIR: ${{ secrets.SSH_APP_DIR || '/opt/debate' }}
-          APP_IMAGE: ${{ needs.build.outputs.app_image }}
-          MIGRATE_IMAGE: ${{ needs.build.outputs.migrate_image }}
-          SCHEDULER_IMAGE: ${{ needs.build.outputs.app_image }}
+          APP_IMAGE: ${{ steps.meta.outputs.app_image }}
+          MIGRATE_IMAGE: ${{ steps.meta.outputs.migrate_image }}
+          SCHEDULER_IMAGE: ${{ steps.meta.outputs.app_image }}
           ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
           ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
         run: |
