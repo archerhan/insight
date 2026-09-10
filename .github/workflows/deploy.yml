@@ -161,10 +161,11 @@ jobs:
           SSH_APP_DIR: ${{ secrets.SSH_APP_DIR || '/opt/debate' }}
           APP_IMAGE: ${{ needs.build.outputs.app_image }}
           MIGRATE_IMAGE: ${{ needs.build.outputs.migrate_image }}
+          SCHEDULER_IMAGE: ${{ needs.build.outputs.app_image }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
-            APP_IMAGE="$APP_IMAGE" MIGRATE_IMAGE="$MIGRATE_IMAGE" APP_DIR="$SSH_APP_DIR" \
+            APP_IMAGE="$APP_IMAGE" MIGRATE_IMAGE="$MIGRATE_IMAGE" SCHEDULER_IMAGE="$SCHEDULER_IMAGE" APP_DIR="$SSH_APP_DIR" \
             'bash -s' <<'REMOTE'
           set -euo pipefail
           cd "$APP_DIR"
@@ -172,8 +173,8 @@ jobs:
             echo "缺少 $APP_DIR/.env.production，请先按 deploy/server-setup.md 创建" >&2
             exit 1
           fi
-          export APP_IMAGE MIGRATE_IMAGE
-          docker compose --env-file .env.production pull app migrate
+          export APP_IMAGE MIGRATE_IMAGE SCHEDULER_IMAGE
+          docker compose --env-file .env.production pull app migrate scheduler
           docker compose --env-file .env.production up -d --no-build
           docker image prune -f
           docker compose --env-file .env.production ps
