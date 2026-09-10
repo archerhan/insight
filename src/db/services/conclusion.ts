@@ -259,22 +259,20 @@ export async function publishConclusion(
       chainByRoot.set(claim.id, buildSupportChain(allClaims, allEvidence, claim.id));
     }
 
-    // 快照里的 authorName 也一并冻结，避免用户改名改写历史导出
-    const chainAuthorIds = [
-      ...new Set(
-        [...chainByRoot.values()]
-          .flat()
-          .map((entry) => entry.authorId)
-          .filter(Boolean),
-      ),
-    ];
-    const chainAuthors = chainAuthorIds.length
+    // 正文标题与作者名一并冻结，避免改名或后续修订改写历史结论。
+    const snapshotAuthorIds = [
+      ...new Set([
+        ...adopted.map((claim) => claim.authorId),
+        ...[...chainByRoot.values()].flat().map((entry) => entry.authorId),
+      ]),
+    ].filter(Boolean);
+    const snapshotAuthors = snapshotAuthorIds.length
       ? await tx
           .select({ id: users.id, displayName: users.displayName })
           .from(users)
-          .where(inArray(users.id, chainAuthorIds))
+          .where(inArray(users.id, snapshotAuthorIds))
       : [];
-    const chainAuthorName = new Map(chainAuthors.map((row) => [row.id, row.displayName]));
+    const snapshotAuthorName = new Map(snapshotAuthors.map((row) => [row.id, row.displayName]));
 
     const now = new Date();
     const versionNo = await nextVersionNoInTx(tx, input.topicId);
@@ -316,11 +314,13 @@ export async function publishConclusion(
         claimId: claim.id,
         position: index + 1,
         role: 'adopted_reason',
+        contentTitle: claim.contentTitle,
+        authorName: snapshotAuthorName.get(claim.authorId) ?? null,
         supportChain: chain.map((entry) => ({
           claimId: entry.claimId,
           contentTitle: entry.contentTitle,
           authorId: entry.authorId,
-          authorName: chainAuthorName.get(entry.authorId) ?? null,
+          authorName: snapshotAuthorName.get(entry.authorId) ?? null,
           evidenceIds: entry.evidenceIds,
         })),
         note: input.note?.trim() || null,
@@ -498,10 +498,12 @@ export async function getConclusionView(
         position: conclusionItems.position,
         role: conclusionItems.role,
         claimId: conclusionItems.claimId,
-        contentTitle: claims.contentTitle,
+        contentTitle: conclusionItems.contentTitle,
+        authorName: conclusionItems.authorName,
+        liveContentTitle: claims.contentTitle,
         claimStatus: claims.status,
         authorId: claims.authorId,
-        authorName: users.displayName,
+        liveAuthorName: users.displayName,
         note: conclusionItems.note,
         supportChain: conclusionItems.supportChain,
       })
@@ -542,10 +544,10 @@ export async function getConclusionView(
     position: item.position,
     role: item.role,
     claimId: item.claimId,
-    contentTitle: item.contentTitle,
+    contentTitle: item.contentTitle ?? item.liveContentTitle,
     claimStatus: item.claimStatus,
     authorId: item.authorId,
-    authorName: item.authorName,
+    authorName: item.authorName ?? item.liveAuthorName,
     note: item.note,
     supportChain: (item.supportChain ?? []).map((entry) => ({
       claimId: entry.claimId,

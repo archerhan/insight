@@ -249,6 +249,9 @@ export const conclusionItems = pgTable(
       .references(() => claims.id),
     position: integer('position').notNull(),
     role: text('role').notNull().default('adopted_reason'),
+    /** 发布时的正文标题与作者名快照，避免后续改名改写历史结论。 */
+    contentTitle: text('content_title'),
+    authorName: text('author_name'),
     supportChain: jsonb('support_chain').$type<
       Array<{
         claimId: string;

@@ -35,6 +35,17 @@ describe('Cron 路由', () => {
     expect(advanceFollowupPrompts).not.toHaveBeenCalled();
   });
 
+  it('未配置密钥时失败关闭', async () => {
+    delete process.env.CRON_SECRET;
+    const request = new Request('http://localhost/api/cron/advance', {
+      headers: { authorization: 'Bearer anything' },
+    });
+    const response = await GET(request);
+    expect(response.status).toBe(503);
+    expect(advanceChallengeTimers).not.toHaveBeenCalled();
+    expect(advanceFollowupPrompts).not.toHaveBeenCalled();
+  });
+
   it('密钥匹配时执行阶段推进并返回统计', async () => {
     vi.mocked(advanceChallengeTimers).mockResolvedValueOnce([
       { challengeId: 'c1', phase: 'due', eventWritten: true },

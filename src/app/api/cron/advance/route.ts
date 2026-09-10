@@ -16,7 +16,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
-  if (secret && request.headers.get('authorization') !== `Bearer ${secret}`) {
+  // 未配置密钥时失败关闭，避免定时推进接口对公网开放。
+  if (!secret) {
+    return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 503 });
+  }
+  if (request.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
