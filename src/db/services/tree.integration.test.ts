@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import postgres from 'postgres';
 import { and, asc, eq, inArray, like } from 'drizzle-orm';
 import { db } from '../client';
-import { challenges, claimEvents, claims, evidence, topics, users } from '../schema';
+import { challenges, claimEvents, claims, evidence, notifications, topics, users } from '../schema';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 
@@ -50,7 +50,10 @@ describeDb('树操作事务层（集成）', () => {
     }
     const userRows = await db.select({ id: users.id }).from(users).where(like(users.authId, `%${nonce}%`));
     if (userRows.length > 0) {
-      await db.delete(users).where(inArray(users.id, userRows.map((row) => row.id)));
+      const userIds = userRows.map((row) => row.id);
+      // 挂反驳/推进计时会给论点作者写站内信，先删通知再删用户，否则撞 notifications 外键
+      await db.delete(notifications).where(inArray(notifications.userId, userIds));
+      await db.delete(users).where(inArray(users.id, userIds));
     }
     await sql.end();
   });

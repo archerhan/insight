@@ -184,7 +184,8 @@ describeDb('广场读服务（集成）', () => {
     const { ownerId } = await createUsers();
     const soon = await publish.publishTopic({
       ownerId,
-      type: 'claim',
+      // 立帖为证第一版只收个人决策（d0181d4 起 plaza 查询按 type=decision 过滤）
+      type: 'decision',
       title: `即将揭晓 · 近 ${nonce}`,
       stance: `即将揭晓的近话题 ${nonce}`,
       lean: 'pro',
@@ -197,7 +198,7 @@ describeDb('广场读服务（集成）', () => {
 
     const past = await publish.publishTopic({
       ownerId,
-      type: 'claim',
+      type: 'decision',
       title: `不应揭晓 · 过期 ${nonce}`,
       stance: `已过期的揭晓 ${nonce}`,
       lean: 'pro',
