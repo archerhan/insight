@@ -97,6 +97,9 @@ services:
   scheduler:
     # 复用应用镜像里的 Node，避免额外依赖 Docker Hub 的 node 镜像
     image: ${SCHEDULER_IMAGE:-debate-app:local}
+    # 应用镜像自带探活（打 3000 端口），定时任务容器没有 Web 服务，需关掉继承的健康检查
+    healthcheck:
+      disable: true
     <<: *app-env
     environment:
       CRON_URL: http://app:3000/api/cron/advance

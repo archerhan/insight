@@ -85,12 +85,13 @@ docker push <ACR>/archerhan/node:24-alpine
 
 ```bash
 cd /opt/debate
-docker compose --env-file .env.production up -d
+docker compose --env-file .env.production up -d --no-build
 docker compose --env-file .env.production ps
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/    # 期望 200
 ```
 
 启动顺序由 compose 保证：`db` 健康 → `migrate` 迁移成功 → `app` 起来 → `scheduler` 挂上。
+注意始终带 `--no-build`：服务器上没有构建上下文（Dockerfile 不在这台机器上），镜像一律从 ACR 拉取。
 
 ## 5. Nginx + HTTPS
 
