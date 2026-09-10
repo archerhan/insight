@@ -388,6 +388,26 @@ describe('议题页（M3：对线视图接入）', () => {
     );
   });
 
+  it('非法 tab 回退默认视图时仍加载该视图数据', async () => {
+    getPublicTopicDetailMock.mockResolvedValueOnce(
+      topicFixture({ status: 'converged' }) as never,
+    );
+    getConclusionViewMock.mockResolvedValueOnce(conclusionFixture() as never);
+    getCurrentUserMock.mockResolvedValueOnce(null as never);
+    useSearchParamsMock.mockReturnValue(new URLSearchParams('tab=foo'));
+
+    render(
+      await TopicPage({
+        params: Promise.resolve({ id: 'topic-1' }),
+        searchParams: Promise.resolve({ tab: 'foo' }),
+      }),
+    );
+    expect(
+      screen.getByText('不建议直接裸辞：先用年假完成实地验证，再决定是否投入。'),
+    ).toBeTruthy();
+    expect(screen.queryByText('结论书暂不可用')).toBeNull();
+  });
+
   it('进行中的楼主在结论书 tab 看到出结论书向导，未决反驳逐条展示', async () => {
     getPublicTopicDetailMock.mockResolvedValueOnce(topicFixture() as never);
     getConclusionViewMock.mockResolvedValueOnce(null as never);

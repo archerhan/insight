@@ -27,7 +27,7 @@ import { listStanceSourceClaims } from '@/db/services/stance';
 import { getPublicTopicDetail, isTopicUuid } from '@/db/services/topics';
 import { getCurrentUser } from '@/lib/auth/current-user';
 import { loginHref } from '@/lib/auth/url';
-import { resolveTopicView } from '@/lib/navigation/topic-view';
+import { isTopicView, resolveTopicView } from '@/lib/navigation/topic-view';
 import {
   isPredictionOutcome,
   outcomeLabel,
@@ -168,10 +168,13 @@ export default async function TopicPage({ params, searchParams }: TopicPageParam
   const query = await searchParams;
   const focusClaimId = firstParam(query.claim);
   const explicitTab = firstParam(query.tab);
+  // 非法 tab 会按状态回退默认视图，因此也要按“未指定 tab”加载对应数据，
+  // 否则视图会切到结论书但数据仍是空的。
+  const requestedTab = isTopicView(explicitTab) ? explicitTab : undefined;
   // 默认视图取决于话题状态，未显式指定 tab 时并行取对线与结论书数据，
   // 显式指定时只取对应视图数据，省去串行等待。
-  const wantArenaInParallel = explicitTab === undefined || explicitTab === 'arena';
-  const wantConclusionInParallel = explicitTab === undefined || explicitTab === 'conclusion';
+  const wantArenaInParallel = requestedTab === undefined || requestedTab === 'arena';
+  const wantConclusionInParallel = requestedTab === undefined || requestedTab === 'conclusion';
   const [topic, user, arenaInParallel] = await Promise.all([
     getPublicTopicDetail(id),
     getCurrentUser(),
