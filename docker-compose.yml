@@ -48,7 +48,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 768m
+          memory: 512m
 
   # 一次性迁移任务：应用启动前跑完，失败则应用不会启动
   migrate:
@@ -79,7 +79,8 @@ services:
       PORT: "3000"
       HOSTNAME: 0.0.0.0
     ports:
-      - "${APP_PORT:-3000}:3000"
+      # 服务器上配好反向代理后把 APP_BIND 设成 127.0.0.1，只允许本机 Nginx/Caddy 访问
+      - "${APP_BIND:-0.0.0.0}:${APP_PORT:-3000}:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -90,7 +91,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 900m
+          memory: 768m
 
   # 替代 Vercel Cron：每日一次调用 /api/cron/advance 推进挑战阶段
   scheduler:
