@@ -416,6 +416,16 @@ export function NewTopicWizard({ initialType }: { initialType?: TopicType }) {
                   placeholder="例：朋友的大理旧院已经营两年，转让价 20 万，我可以先入股试水半年"
                   className={cn(inputClass, 'min-h-20 resize-y leading-6')}
                 />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEvidenceSummary('');
+                    setShowEvidence(false);
+                  }}
+                  className="mt-2 text-[12.5px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                >
+                  移除首条论据
+                </button>
               </div>
             )}
           </div>
