@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Compass, FileText, Plus, Scale } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -172,6 +172,12 @@ export function NewTopicWizard({ initialType }: { initialType?: TopicType }) {
   const [bountyEnabled, setBountyEnabled] = useState(false);
   const [allowPublicRebuttal, setAllowPublicRebuttal] = useState(true);
   const [localError, setLocalError] = useState<string | null>(null);
+  /**
+   * 只有用户真实点击“发布话题”才允许提交。
+   * 浏览器在步骤切换后可能产生一个没有点击事件的 submit（submitter 指向新挂载的发布按钮），
+   * 该隐式提交必须在表单层被拦截。
+   */
+  const publishIntentRef = useRef(false);
   const [publishState, publishAction, isPending] = useActionState(
     publishTopicAction,
     initialPublishState,
@@ -206,11 +212,13 @@ export function NewTopicWizard({ initialType }: { initialType?: TopicType }) {
       return;
     }
     setLocalError(null);
+    publishIntentRef.current = false;
     setStep((value) => Math.min(value + 1, 3));
   }
 
   function goBack() {
     setLocalError(null);
+    publishIntentRef.current = false;
     setStep((value) => Math.max(value - 1, 1));
   }
 
@@ -243,8 +251,7 @@ export function NewTopicWizard({ initialType }: { initialType?: TopicType }) {
         id="topic-wizard"
         action={publishAction}
         onSubmit={(event) => {
-          // 第二步的“下一步”按钮已移出表单，这里只兜底拦截非发布步骤的提交。
-          if (step !== 3) event.preventDefault();
+          if (step !== 3 || !publishIntentRef.current) event.preventDefault();
         }}
       >
       <input type="hidden" name="type" value={type} />
@@ -553,7 +560,14 @@ export function NewTopicWizard({ initialType }: { initialType?: TopicType }) {
             <ArrowRight data-icon="inline-end" aria-hidden="true" />
           </Button>
         ) : (
-          <Button type="submit" form="topic-wizard" disabled={isPending}>
+          <Button
+            type="submit"
+            form="topic-wizard"
+            disabled={isPending}
+            onClick={() => {
+              publishIntentRef.current = true;
+            }}
+          >
             {isPending ? '发布中…' : '发布话题'}
             {!isPending && <FileText data-icon="inline-end" aria-hidden="true" />}
           </Button>
