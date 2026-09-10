@@ -6,15 +6,15 @@
 
 - Next.js（App Router）+ TypeScript
 - TailwindCSS + shadcn/ui
-- PostgreSQL（宿主 Neon）+ Drizzle ORM
+- PostgreSQL 16（Docker 自建）+ Drizzle ORM
 - Vitest + React Testing Library（单元/组件测试）
-- GitHub Actions（CI）→ Vercel（部署）
+- GitHub Actions（CI）→ Docker Compose（部署）
 
 ## 目录
 
 ```text
 src/
-  app/              # 页面与 API（Vercel Cron 入口）
+  app/              # 页面与 API（含定时任务入口 /api/cron/advance）
   db/               # Drizzle schema / client / 种子数据 / 树服务
   lib/domain/       # 纯领域函数：树、状态机、击穿传播、计时（带单测）
 design/             # HTML 界面示意稿
@@ -25,17 +25,61 @@ drizzle/            # 生成的 SQL 迁移
 ## 本地开发
 
 ```bash
-pnpm install
-cp .env.example .env.local   # 填入 Neon DATABASE_URL 与 CRON_SECRET
-openssl rand -base64 32      # 结果填入 .env.local 的 AUTH_SECRET
+cp .env.example .env.local    # 首次：填 CRON_SECRET、AUTH_SECRET、GitHub OAuth
+openssl rand -base64 32       # 结果填入 .env.local 的 AUTH_SECRET
 # 另需 GitHub OAuth：https://github.com/settings/developers → OAuth Apps
 # 回调地址：http://localhost:3000/api/auth/callback/github
-pnpm db:generate             # 由 schema 生成迁移
-pnpm db:migrate              # 执行迁移
-pnpm db:seed                 # 写入两棵演示树（幂等，可重复执行）
-pnpm db:demo                 # M0 验收走查：反驳→击穿→击杀链自动提升 + 事件回放
+docker compose up -d --build  # 构建镜像 → 起库 → 自动迁移 → 起应用 + 定时任务
+docker compose run --rm migrate pnpm db:seed   # 可选：写入两棵演示树（幂等）
+open http://localhost:3000
+```
+
+只想在主机上跑代码、数据库留在 Docker 里：
+
+```bash
+docker compose up -d db       # 只起库（127.0.0.1:5432）
+pnpm install
+pnpm db:migrate               # .env.local 的 DATABASE_URL 需指向 localhost:5432
 pnpm dev
 ```
+
+常用命令：
+
+```bash
+docker compose ps                                        # 服务状态
+docker compose logs -f app                               # 应用日志
+docker compose exec db psql -U debate -d debate          # 进数据库
+docker compose run --rm migrate pnpm db:migrate          # 容器内执行迁移
+docker compose run --rm migrate pnpm db:demo             # M0 验收走查
+docker compose down                                      # 停止（数据保留在 db-data 卷）
+docker compose down -v                                   # 停止并清空数据库数据
+```
+
+`pnpm db:generate`（由 schema 生成迁移）在主机侧执行，产物提交到 `drizzle/`。
+
+## Docker 部署（本地与阿里云同一套）
+
+同一个 `Dockerfile` 产出三个目标：
+
+| 目标 | 用途 | 说明 |
+| --- | --- | --- |
+| `runner` | 应用运行时 | 只含 Next.js standalone 产物，非 root 用户启动，约 200MB |
+| `migrator` | 迁移 / 种子 | 带 drizzle-kit 与 tsx 的一次性任务，不进生产运行时镜像 |
+| `builder` | 构建 | 构建期不连库（页面全是动态渲染），`DATABASE_URL` 用占位值 |
+
+`docker-compose.yml` 的编排顺序：`db`（Postgres 16 + 数据卷）→ `migrate`（迁移成功才放行应用）→ `app`（对外 3000）→ `scheduler`（每日 03:00 UTC 调用 `/api/cron/advance`，替代 Vercel Cron）。
+
+服务器上线（镜像由 GitHub Actions 构建推送到 ACR，服务器只负责拉取）：
+
+```bash
+APP_ENV_FILE=.env.production docker compose --env-file .env.production up -d --no-build
+```
+
+- 数据在 `db-data` 卷里，`docker compose down` 不会删；升级只重建 `app`；
+- 迁移在每次 `up` 时自动执行（drizzle-kit 跳过已应用迁移），发布顺序天然安全；
+- 外层用 Nginx/Caddy 反代到 `127.0.0.1:3000` 并签证书，GitHub OAuth 回调登记为 `{AUTH_URL}/api/auth/callback/github`。
+- 完整上线手册见 [deploy/server-setup.md](deploy/server-setup.md)，生产环境变量模板见 [deploy/.env.production.example](deploy/.env.production.example)；
+- 发布流水线见 [.github/workflows/deploy.yml](.github/workflows/deploy.yml)：main 上的 CI 通过后自动构建并推送 ACR，再 SSH 到服务器拉取重启。
 
 质量门禁（CI 与本地一致）：
 
@@ -78,7 +122,7 @@ AUTH_GITHUB_ID=...         # GitHub OAuth App Client ID
 AUTH_GITHUB_SECRET=...     # GitHub OAuth App Client Secret
 ```
 
-认证回调地址固定为 `{AUTH_URL}/api/auth/callback/github`；Vercel 部署时把 `AUTH_URL` 换成正式域名，并在 GitHub OAuth App 中登记该回调。
+认证回调地址固定为 `{AUTH_URL}/api/auth/callback/github`；部署到服务器时把 `AUTH_URL` 换成正式域名，并在 GitHub OAuth App 中登记该回调。
 
 ## M2 状态（已达成）
 

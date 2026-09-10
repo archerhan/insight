@@ -1,0 +1,174 @@
+# 阿里云服务器上线手册（cn-beijing / 2C2G）
+
+本地与服务器跑的是同一套 `docker-compose.yml`：Postgres 与应用同机，不依赖 Neon。
+服务器只负责拉取镜像和运行容器，镜像由 GitHub Actions 构建后推到 ACR。
+
+## 0. 需要在 GitHub 里配置的 Secrets
+
+仓库 `Settings → Secrets and variables → Actions → New repository secret`：
+
+| 名称 | 值 | 说明 |
+| --- | --- | --- |
+| `ACR_REGISTRY` | `registry.example.com` | 公网地址，CI 推送用 |
+| `ACR_NAMESPACE` | `archerhan` | 命名空间 |
+| `ACR_USERNAME` | `your-registry-user` | 控制台「访问凭证」页的登录用户名 |
+| `ACR_PASSWORD` | 控制台设置的 Registry 固定密码 | |
+| `SSH_HOST` | 服务器公网 IP | 不填则只推镜像、不自动部署 |
+| `SSH_USER` | 登录用户，如 `root` | |
+| `SSH_KEY` | 部署用私钥的完整内容 | 建议单独生成一对，见下 |
+| `SSH_PORT` | `22` | 可选 |
+| `SSH_APP_DIR` | `/opt/debate` | 可选，默认就是这个 |
+
+生成一对专用部署密钥（公钥写进服务器 `~/.ssh/authorized_keys`，私钥内容粘进 `SSH_KEY`）：
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/debate_deploy -N "" -C "github-actions-deploy"
+cat ~/.ssh/debate_deploy
+```
+
+## 1. 服务器一次性准备
+
+安全组只放行 80 / 443 与 SSH 端口。不要放行 3000 与 5432，它们只在服务器本机可访问。
+
+```bash
+# Alibaba Cloud Linux / CentOS
+sudo dnf install -y docker && sudo systemctl enable --now docker
+# Ubuntu / Debian 改用：sudo apt update && sudo apt install -y docker.io docker-compose-v2
+
+sudo mkdir -p /opt/debate /opt/backups && sudo chown -R "$USER" /opt/debate /opt/backups
+```
+
+如果拉 Docker Hub 基础镜像不稳定（国内常见），配置镜像加速器：
+控制台 → 容器镜像服务 → 镜像工具 → 镜像加速器，把地址写进 `/etc/docker/daemon.json` 后 `sudo systemctl restart docker`。
+也可以改用 ACR 里的副本，见第 3 节。
+
+## 2. 登录 ACR
+
+```bash
+# 内网地址（推荐：同地域，快且不计公网流量）
+docker login --username=your-registry-user registry.example.com
+
+# 内网不通（跨地域/跨 VPC）时改用公网地址
+docker login --username=your-registry-user registry.example.com
+```
+
+登录后凭证存在服务器的 `/root/.docker/config.json`，之后拉取不再需要密码。
+
+## 3. 写生产环境变量
+
+```bash
+cd /opt/debate
+cp /path/to/deploy/.env.production.example .env.production   # 或按模板手动创建
+chmod 600 .env.production
+openssl rand -base64 32   # AUTH_SECRET
+openssl rand -base64 32   # CRON_SECRET
+```
+
+必填：`POSTGRES_PASSWORD`、`AUTH_SECRET`、`AUTH_URL`（正式域名，https）、`AUTH_GITHUB_ID`、`AUTH_GITHUB_SECRET`、`CRON_SECRET`。
+GitHub OAuth App 的回调地址登记为 `{AUTH_URL}/api/auth/callback/github`。
+
+可选：若服务器拉不动 Docker Hub 基础镜像，在 ACR 里再建 `postgres`、`node` 两个仓库，
+从能拉动的机器把它们推上去，然后在 `.env.production` 里打开 `POSTGRES_IMAGE` / `NODE_IMAGE` 两行。
+
+```bash
+# 在本机（已能拉 Docker Hub）执行
+docker tag postgres:16-alpine <ACR>/archerhan/postgres:16-alpine
+docker tag node:24-alpine     <ACR>/archerhan/node:24-alpine
+docker push <ACR>/archerhan/postgres:16-alpine
+docker push <ACR>/archerhan/node:24-alpine
+```
+
+## 4. 首次启动
+
+`docker-compose.yml` 与 `docker/scheduler.mjs` 由 Deploy 工作流每次发布时自动同步到 `/opt/debate`；
+也可以先手动 scp 上去，或在 Actions 页手动跑一次 Deploy（没配 SSH Secret 时它只推镜像）。
+
+```bash
+cd /opt/debate
+docker compose --env-file .env.production up -d
+docker compose --env-file .env.production ps
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/    # 期望 200
+```
+
+启动顺序由 compose 保证：`db` 健康 → `migrate` 迁移成功 → `app` 起来 → `scheduler` 挂上。
+
+## 5. Nginx + HTTPS
+
+```nginx
+# /etc/nginx/conf.d/debate.conf
+server {
+    listen 80;
+    server_name 你的域名;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+sudo dnf install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d 你的域名      # 自动改写为 443 并配置续期
+```
+
+## 6. 数据库备份
+
+```bash
+sudo tee /opt/backups/db-backup.sh > /dev/null <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+cd /opt/debate
+docker compose --env-file .env.production exec -T db \
+  pg_dump -U debate debate | gzip > "/opt/backups/debate-$(date +%F).sql.gz"
+find /opt/backups -name 'debate-*.sql.gz' -mtime +14 -delete
+SH
+sudo chmod +x /opt/backups/db-backup.sh
+```
+
+```bash
+# 每天 04:00 备份，保留最近 14 天
+(crontab -l 2>/dev/null; echo "0 4 * * * /opt/backups/db-backup.sh") | crontab -
+```
+
+数据本体在 `db-data` 卷里，`docker compose down` 不会删；只有 `down -v` 才会清空。
+
+## 7. 日常发布与回滚
+
+推送到 `main` → CI 跑门禁 → 通过后 Deploy 自动构建镜像、推送 ACR、SSH 拉取重启。
+服务器全程不构建，整个过程约 1–2 分钟。
+
+回滚时把镜像标签换成上一个 commit（迁移不可逆，跨含新迁移的版本前先确认）：
+
+```bash
+cd /opt/debate
+APP_IMAGE=<repo>:<旧 sha> MIGRATE_IMAGE=<repo>:<旧 sha>-migrate \
+  docker compose --env-file .env.production up -d --no-build
+```
+
+清理旧镜像用 `docker image prune -af`：它只删未被使用的镜像，不影响运行中的容器与 `db-data` 卷。
+
+## 8. 排错
+
+```bash
+docker compose --env-file .env.production ps            # 看谁没起来
+docker compose --env-file .env.production logs -f app   # 应用日志
+docker compose --env-file .env.production logs migrate  # 迁移日志
+docker compose --env-file .env.production exec db psql -U debate -d debate
+```
+
+2C2G 上若发现构建吃紧，先确认没有在服务器上执行 `docker compose build`——镜像应该在 CI 里构建。
+另外建议给服务器加 2GB swap 作为兜底：
+
+```bash
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```

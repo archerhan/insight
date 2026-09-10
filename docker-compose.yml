@@ -1,0 +1,114 @@
+# 本地与阿里云统一编排：Postgres 与应用同机（不再依赖 Neon）。
+#
+# 本地：
+#   docker compose up -d --build                     # 构建镜像 + 起库 + 自动迁移 + 起应用
+#   docker compose run --rm migrate pnpm db:seed     # 可选：写入演示数据
+#
+# 服务器（镜像由 CI 推到 ACR，服务器只负责拉取）：
+#   APP_ENV_FILE=.env.production docker compose --env-file .env.production pull
+#   APP_ENV_FILE=.env.production docker compose --env-file .env.production up -d --no-build
+name: debate
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-app-env: &app-env
+  env_file:
+    - ${APP_ENV_FILE:-.env.local}
+
+services:
+  db:
+    # 国内服务器拉 Docker Hub 不稳定时，可把该镜像推到 ACR，再用 POSTGRES_IMAGE 覆盖
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-debate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-debate}
+      POSTGRES_DB: ${POSTGRES_DB:-debate}
+      TZ: Asia/Shanghai
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      # 只绑定回环地址，方便主机侧工具直连；公网无法访问
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-debate} -d ${POSTGRES_DB:-debate}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+
+  # 一次性迁移任务：应用启动前跑完，失败则应用不会启动
+  migrate:
+    build:
+      context: .
+      target: migrator
+    image: ${MIGRATE_IMAGE:-debate-migrate:local}
+    <<: *app-env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-debate}:${POSTGRES_PASSWORD:-debate}@db:5432/${POSTGRES_DB:-debate}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    logging: *logging
+
+  app:
+    build:
+      context: .
+      target: runner
+    image: ${APP_IMAGE:-debate-app:local}
+    <<: *app-env
+    environment:
+      NODE_ENV: production
+      # 覆盖 .env.local 中的连接串，指向 compose 内的 db 服务
+      DATABASE_URL: postgresql://${POSTGRES_USER:-debate}:${POSTGRES_PASSWORD:-debate}@db:5432/${POSTGRES_DB:-debate}
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 900m
+
+  # 替代 Vercel Cron：每日一次调用 /api/cron/advance 推进挑战阶段
+  scheduler:
+    image: ${NODE_IMAGE:-node:24-alpine}
+    <<: *app-env
+    environment:
+      CRON_URL: http://app:3000/api/cron/advance
+      CRON_HOUR_UTC: ${CRON_HOUR_UTC:-3}
+      CRON_TICK_SECONDS: ${CRON_TICK_SECONDS:-300}
+      TZ: UTC
+    command: ["node", "/scheduler.mjs"]
+    volumes:
+      - ./docker/scheduler.mjs:/scheduler.mjs:ro
+    depends_on:
+      app:
+        condition: service_started
+    restart: unless-stopped
+    logging: *logging
+
+volumes:
+  db-data:
