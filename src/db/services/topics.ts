@@ -11,6 +11,11 @@ import type { TopicType } from '@/lib/domain/publish';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** 话题路由用的 UUID 形状校验：非法 id 在读服务前就按 404 处理。 */
+export function isTopicUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
 export interface TopicDetail {
   id: string;
   type: TopicType;

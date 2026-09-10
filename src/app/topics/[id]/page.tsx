@@ -24,7 +24,7 @@ import {
   type TopicPredictionContext,
 } from '@/db/services/predictions';
 import { listStanceSourceClaims } from '@/db/services/stance';
-import { getPublicTopicDetail } from '@/db/services/topics';
+import { getPublicTopicDetail, isTopicUuid } from '@/db/services/topics';
 import { getCurrentUser } from '@/lib/auth/current-user';
 import { loginHref } from '@/lib/auth/url';
 import { resolveTopicView } from '@/lib/navigation/topic-view';
@@ -164,6 +164,7 @@ function PlaceholderCard({
 
 export default async function TopicPage({ params, searchParams }: TopicPageParams) {
   const { id } = await params;
+  if (!isTopicUuid(id)) notFound();
   const query = await searchParams;
   const focusClaimId = firstParam(query.claim);
   const explicitTab = firstParam(query.tab);

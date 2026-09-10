@@ -15,6 +15,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/db/services/topics', () => ({
   getPublicTopicDetail: vi.fn(),
+  isTopicUuid: vi.fn(() => true),
 }));
 
 vi.mock('@/db/services/arena', () => ({
@@ -52,7 +53,7 @@ vi.mock('@/app/topics/[id]/actions', () => ({
   respondFollowupAction: vi.fn(),
 }));
 
-import { getPublicTopicDetail } from '@/db/services/topics';
+import { getPublicTopicDetail, isTopicUuid } from '@/db/services/topics';
 import { getArenaView } from '@/db/services/arena';
 import {
   getAdoptionDraftContext,
@@ -64,6 +65,7 @@ import { getCurrentUser } from '@/lib/auth/current-user';
 import TopicPage from './page';
 
 const getPublicTopicDetailMock = vi.mocked(getPublicTopicDetail);
+const isTopicUuidMock = vi.mocked(isTopicUuid);
 const getArenaViewMock = vi.mocked(getArenaView);
 const getConclusionViewMock = vi.mocked(getConclusionView);
 const getAdoptionDraftContextMock = vi.mocked(getAdoptionDraftContext);
@@ -299,6 +301,8 @@ beforeEach(() => {
   notFoundMock.mockClear();
   useSearchParamsMock.mockReturnValue(new URLSearchParams());
   getPublicTopicDetailMock.mockReset();
+  isTopicUuidMock.mockReset();
+  isTopicUuidMock.mockReturnValue(true);
   getArenaViewMock.mockReset();
   getConclusionViewMock.mockReset();
   getAdoptionDraftContextMock.mockReset();
@@ -463,6 +467,17 @@ describe('议题页（M3：对线视图接入）', () => {
         searchParams: Promise.resolve({}),
       }),
     ).rejects.toThrow('NEXT_NOT_FOUND');
+  });
+
+  it('非法话题 ID 在读服务前直接按 404 处理', async () => {
+    isTopicUuidMock.mockReturnValueOnce(false);
+    await expect(
+      TopicPage({
+        params: Promise.resolve({ id: 'not-a-uuid' }),
+        searchParams: Promise.resolve({}),
+      }),
+    ).rejects.toThrow('NEXT_NOT_FOUND');
+    expect(getPublicTopicDetailMock).not.toHaveBeenCalled();
   });
 
   it('开启立帖为证的话题展示登记面板，未登录给登录引导', async () => {
