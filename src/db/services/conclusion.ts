@@ -24,6 +24,7 @@ import type { TopicType } from '@/lib/domain/publish';
 import { getUnresolvedChallenges, type UnresolvedChallenge } from './arena';
 import { createFollowupInTx } from './predictions';
 import { refreshUserStatsInTx } from './stats';
+import { refreshTopicCountersInTx } from './topic-counters';
 
 /**
  * M4 结论书写/读服务：
@@ -366,6 +367,7 @@ export async function publishConclusion(
         updatedAt: now,
       })
       .where(eq(topics.id, input.topicId));
+    await refreshTopicCountersInTx(tx, input.topicId);
 
     // 个人决策话题发布结论书后生成 T+30 回访行（worker 到期发站内提醒）。
     if (topic.type === 'decision') {

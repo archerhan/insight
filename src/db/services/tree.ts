@@ -9,6 +9,7 @@ import { buildReparentPlan, childAncestors, type ClaimLike } from '@/lib/domain/
 import { planRefutationCascade } from '@/lib/domain/propagation';
 import { db, type DbTx } from '@/db/client';
 import { challenges, claimEvents, claims, topics, users } from '@/db/schema';
+import { refreshTopicCountersInTx } from './topic-counters';
 
 /**
  * 树操作服务层：所有影响树走向的写操作都在同一事务内完成，
@@ -82,6 +83,7 @@ export async function insertClaimInTx(
     actorUserId: input.authorId,
     detail: { parentId: input.parentId, relation: input.relation },
   });
+  await refreshTopicCountersInTx(tx, input.topicId);
   return claim;
 }
 
@@ -299,6 +301,7 @@ export async function openChallengeInTx(
       rebuttalClaimId: input.challengerClaimId,
     },
   });
+  await refreshTopicCountersInTx(tx, input.topicId);
   return challenge;
 }
 
@@ -398,6 +401,7 @@ export async function respondToChallenge(input: {
       actorUserId: input.authorId,
       detail: { challengeId: challenge.id, responseClaimId: response.id },
     });
+    await refreshTopicCountersInTx(tx, challenge.topicId);
     return response;
   });
 }
@@ -450,6 +454,7 @@ export async function concedeToChallenge(input: { challengeId: string; actorId: 
       .update(challenges)
       .set({ status: 'conceded', resolutionReason: 'author_conceded', resolvedAt: new Date() })
       .where(eq(challenges.id, challenge.id));
+    await refreshTopicCountersInTx(tx, challenge.topicId);
   });
 }
 
@@ -543,6 +548,7 @@ export async function migrateClaim(input: {
         movedClaims: plan.ancestorsById.size,
       },
     });
+    await refreshTopicCountersInTx(tx, claim.topicId);
   });
 }
 
@@ -608,6 +614,7 @@ export async function reviseClaim(input: {
       actorUserId: input.authorId,
       detail: { parentId: claim.parentId, relation: claim.relation, supersedesClaimId: claim.id },
     });
+    await refreshTopicCountersInTx(tx, claim.topicId);
     return revision;
   });
 }

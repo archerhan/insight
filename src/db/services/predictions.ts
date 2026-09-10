@@ -25,6 +25,7 @@ import {
 } from '@/lib/domain/predictions';
 import { notifyInTx } from './notifications';
 import { refreshUserStatsInTx } from './stats';
+import { refreshTopicCountersInTx } from './topic-counters';
 
 /**
  * M5 立帖为证服务：
@@ -184,6 +185,7 @@ export async function placePrediction(input: {
       .update(topics)
       .set({ predictionCount: topic.predictionCount + 1, updatedAt: now })
       .where(eq(topics.id, topic.id));
+    await refreshTopicCountersInTx(tx, topic.id);
 
     return row;
   });
@@ -555,6 +557,7 @@ export async function respondToFollowup(input: {
       .update(topics)
       .set({ predictionCount: remainingRows.length, updatedAt: now })
       .where(eq(topics.id, input.topicId));
+    await refreshTopicCountersInTx(tx, input.topicId);
 
     await tx.insert(claimEvents).values({
       topicId: input.topicId,

@@ -17,7 +17,7 @@ import type { TopicType } from '@/lib/domain/publish';
  * 广场读服务（M2，按《数据库设计》第六节查询模板落地）：
  * - 正在对线：status=open 的公开话题，按 last_activity_at 排序；
  * - 最新结论书：已发布结论书版本（current_version_id 指向 published）；
- * - 即将揭晓：stake_enabled 且有未来 reveal_at 的公开话题；
+ * - 即将揭晓：stake_enabled 且有未来 reveal_at 的公开个人决策话题（第一版不含公共议题）；
  * - 右侧战绩速览：从可回溯的账本/事件表派生计数。
  * 计数不依赖反规范化列，读取时按真实数据聚合，避免后续 worker 未更新时展示失真。
  */
@@ -143,6 +143,7 @@ export async function getPlazaSections(limit = 8): Promise<PlazaData> {
         and(
           eq(topics.status, 'open'),
           eq(topics.visibility, 'public'),
+          eq(topics.type, 'decision'),
           eq(topics.stakeEnabled, true),
           isNotNull(topics.revealAt),
           gt(topics.revealAt, new Date()),
