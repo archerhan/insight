@@ -89,7 +89,7 @@ export function ArenaComposer({
   const [paraphrase, setParaphrase] = useState('');
   const [paraphraseReport, setParaphraseReport] = useState<ProgramCheckReport | null>(null);
   const [paraphrasePassed, setParaphrasePassed] = useState(false);
-  const [serverParaphraseDismissed, setServerParaphraseDismissed] = useState(false);
+  const [submittedParaphrase, setSubmittedParaphrase] = useState('');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
 
@@ -109,7 +109,8 @@ export function ArenaComposer({
    * 避免界面同时出现“复述检验通过”和错误提示。
    */
   const serverParaphraseError =
-    !serverParaphraseDismissed && rebuttalState.failedCheck === 'paraphrase'
+    rebuttalState.failedCheck === 'paraphrase' &&
+    submittedParaphrase === paraphrase
       ? (rebuttalState.error ?? '复述未通过服务端检验，请重新用自己的话概括对方观点')
       : null;
   const showParaphraseStep = !paraphrasePassed || Boolean(serverParaphraseError);
@@ -118,7 +119,7 @@ export function ArenaComposer({
     setMode(next);
     setParaphraseReport(null);
     setParaphrasePassed(false);
-    setServerParaphraseDismissed(false);
+    setSubmittedParaphrase('');
   }
 
   function checkParaphrase() {
@@ -240,7 +241,6 @@ export function ArenaComposer({
                     setParaphrase(event.target.value);
                     setParaphraseReport(null);
                     setParaphrasePassed(false);
-                    setServerParaphraseDismissed(true);
                   }}
                   placeholder="先写下对方观点的复述……"
                   maxLength={500}
@@ -262,7 +262,12 @@ export function ArenaComposer({
               )}
             </div>
           ) : (
-            <form action={rebuttalAction}>
+            <form
+              action={rebuttalAction}
+              onSubmit={() => {
+                setSubmittedParaphrase(paraphrase);
+              }}
+            >
               <input type="hidden" name="topicId" value={topicId} />
               <input type="hidden" name="targetClaimId" value={focusId} />
               <input type="hidden" name="paraphrase" value={paraphrase} />
@@ -302,7 +307,7 @@ export function ArenaComposer({
                   onClick={() => {
                     setParaphrasePassed(false);
                     setParaphraseReport(null);
-                    setServerParaphraseDismissed(false);
+                    setSubmittedParaphrase('');
                   }}
                 >
                   重新复述
