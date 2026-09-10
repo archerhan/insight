@@ -33,8 +33,14 @@ export function ChallengeResponsePanel({
   const [respondTitle, setRespondTitle] = useState('');
   const [respondBody, setRespondBody] = useState('');
   const [confirmingConcede, setConfirmingConcede] = useState(false);
-  const [respondState, respondAction] = useActionState(respondChallengeAction, initialActionState);
-  const [concedeState, concedeAction] = useActionState(concedeChallengeAction, initialActionState);
+  const [respondState, respondAction, respondPending] = useActionState(
+    respondChallengeAction,
+    initialActionState,
+  );
+  const [concedeState, concedeAction, concedePending] = useActionState(
+    concedeChallengeAction,
+    initialActionState,
+  );
 
   if (!canPost) {
     return (
@@ -79,8 +85,8 @@ export function ChallengeResponsePanel({
             <input type="hidden" name="topicId" value={topicId} />
             <input type="hidden" name="challengeId" value={challengeId} />
             <input type="hidden" name="targetClaimId" value={targetClaimId} />
-            <Button type="submit" variant="destructive" size="sm">
-              确认承认击穿
+            <Button type="submit" variant="destructive" size="sm" disabled={concedePending}>
+              {concedePending ? '提交中…' : '确认承认击穿'}
             </Button>
             <Button
               type="button"
@@ -131,8 +137,8 @@ export function ChallengeResponsePanel({
             />
           </label>
           <div className="mt-2.5 flex items-center gap-3">
-            <Button type="submit" size="sm">
-              提交回应
+            <Button type="submit" size="sm" disabled={respondPending}>
+              {respondPending ? '提交中…' : '提交回应'}
             </Button>
             <span className="inline-flex items-center gap-1 text-[11.5px] text-muted-foreground">
               <CheckCircle2 className="size-3.5" aria-hidden="true" />

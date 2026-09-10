@@ -65,7 +65,7 @@ export function PredictionPanel({
   const [open, setOpen] = useState(false);
   const [statement, setStatement] = useState('');
   const [outcome, setOutcome] = useState<'regret' | 'no_regret'>('regret');
-  const [state, action] = useActionState(placePredictionAction, initialActionState);
+  const [state, action, pending] = useActionState(placePredictionAction, initialActionState);
   const dateLabel = revealLabel(revealAt);
 
   const registerVisible = canRegister && !settled && !userPrediction;
@@ -166,8 +166,8 @@ export function PredictionPanel({
           </label>
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Button type="submit" size="sm">
-              立帖为证
+            <Button type="submit" size="sm" disabled={pending}>
+              {pending ? '提交中…' : '立帖为证'}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen((value) => !value)}>
               {open ? '收起' : '说明'}

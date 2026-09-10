@@ -38,7 +38,7 @@ export function ConclusionWizard({
     () => new Set(roots.map((root) => root.id)),
   );
   const [acknowledged, setAcknowledged] = useState<Set<string>>(new Set());
-  const [state, action] = useActionState(publishConclusionAction, initialActionState);
+  const [state, action, pending] = useActionState(publishConclusionAction, initialActionState);
 
   function toggleSelected(claimId: string) {
     setSelected((previous) => {
@@ -197,8 +197,8 @@ export function ConclusionWizard({
         )}
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button type="submit" disabled={!canSubmit}>
-            发布结论书
+          <Button type="submit" disabled={!canSubmit || pending}>
+            {pending ? '发布中…' : '发布结论书'}
           </Button>
           {!canSubmit && selected.size === 0 && (
             <span className="text-[12px] text-muted-foreground">请至少勾选一条采纳理由</span>

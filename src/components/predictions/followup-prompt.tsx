@@ -28,7 +28,7 @@ const LEVEL_OPTIONS = [
  */
 export function FollowupPrompt({ topicId, wave, dueAt, overdue }: FollowupPromptProps) {
   const [level, setLevel] = useState<string>('no_regret');
-  const [state, action] = useActionState(respondFollowupAction, initialActionState);
+  const [state, action, pending] = useActionState(respondFollowupAction, initialActionState);
   const due = new Date(dueAt);
   const dateLabel = due.toLocaleDateString('zh-CN', {
     year: 'numeric',
@@ -84,8 +84,8 @@ export function FollowupPrompt({ topicId, wave, dueAt, overdue }: FollowupPrompt
             ))}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button type="submit" size="sm">
-              确认并揭晓押注
+            <Button type="submit" size="sm" disabled={pending}>
+              {pending ? '提交中…' : '确认并揭晓押注'}
             </Button>
           </div>
           {state.error && (

@@ -32,6 +32,8 @@ import { isTopicView } from '@/lib/navigation/topic-view';
 
 export interface TopicActionState {
   error: string | null;
+  /** 程序检查未通过时命中的检查类型，供表单切换回对应步骤。 */
+  failedCheck?: 'paraphrase' | 'duplicate' | 'insult' | null;
 }
 
 function firstString(formData: FormData, name: string): string {
@@ -65,8 +67,10 @@ function requireCourseCompleted(user: { courseCompletedAt: Date | null }, callba
 
 function applyProgramOutcome(
   outcome: NodeWriteOutcome,
-): { error: string | null; ok: boolean } {
-  return outcome.ok ? { error: null, ok: true } : { error: outcome.error, ok: false };
+): { error: string | null; failedCheck: TopicActionState['failedCheck']; ok: boolean } {
+  if (outcome.ok) return { error: null, failedCheck: null, ok: true };
+  const flagged = outcome.entries.find((entry) => entry.status === 'flagged');
+  return { error: outcome.error, failedCheck: flagged?.kind ?? null, ok: false };
 }
 
 function errorMessage(error: unknown): string {
@@ -105,7 +109,7 @@ export async function postSupportAction(
     return { error: errorMessage(error) };
   }
   const applied = applyProgramOutcome(outcome);
-  if (!applied.ok) return { error: applied.error };
+  if (!applied.ok) return { error: applied.error, failedCheck: applied.failedCheck };
   redirect(arenaHref(topicId, parentId));
 }
 
@@ -144,7 +148,7 @@ export async function postRebutalAction(
     return { error: errorMessage(error) };
   }
   const applied = applyProgramOutcome(outcome);
-  if (!applied.ok) return { error: applied.error };
+  if (!applied.ok) return { error: applied.error, failedCheck: applied.failedCheck };
   redirect(arenaHref(topicId, targetClaimId));
 }
 
@@ -176,7 +180,7 @@ export async function respondChallengeAction(
     return { error: errorMessage(error) };
   }
   const applied = applyProgramOutcome(outcome);
-  if (!applied.ok) return { error: applied.error };
+  if (!applied.ok) return { error: applied.error, failedCheck: applied.failedCheck };
   redirect(arenaHref(topicId, targetClaimId));
 }
 

@@ -43,7 +43,7 @@ export function StanceChangeWizard({
   const [fromStance, setFromStance] = useState(defaultFrom);
   const [toStance, setToStance] = useState('');
   const [statement, setStatement] = useState('');
-  const [state, action] = useActionState(recordStanceChangeAction, initialActionState);
+  const [state, action, pending] = useActionState(recordStanceChangeAction, initialActionState);
 
   return (
     <div>
@@ -119,8 +119,8 @@ export function StanceChangeWizard({
           </label>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button type="submit" size="sm">
-              记录立场变更
+            <Button type="submit" size="sm" disabled={pending}>
+              {pending ? '提交中…' : '记录立场变更'}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
               取消

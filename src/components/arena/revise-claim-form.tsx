@@ -25,7 +25,7 @@ export function ReviseClaimForm({ topicId, claimId, claimTitle }: ReviseClaimFor
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(claimTitle);
   const [body, setBody] = useState('');
-  const [state, action] = useActionState(reviseClaimAction, initialActionState);
+  const [state, action, pending] = useActionState(reviseClaimAction, initialActionState);
 
   return (
     <div>
@@ -65,8 +65,8 @@ export function ReviseClaimForm({ topicId, claimId, claimTitle }: ReviseClaimFor
             />
           </label>
           <div className="mt-2.5 flex items-center gap-2">
-            <Button type="submit" size="sm">
-              发布修订
+            <Button type="submit" size="sm" disabled={pending}>
+              {pending ? '提交中…' : '发布修订'}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
               取消

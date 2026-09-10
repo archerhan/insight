@@ -89,18 +89,36 @@ export function ArenaComposer({
   const [paraphrase, setParaphrase] = useState('');
   const [paraphraseReport, setParaphraseReport] = useState<ProgramCheckReport | null>(null);
   const [paraphrasePassed, setParaphrasePassed] = useState(false);
+  const [serverParaphraseDismissed, setServerParaphraseDismissed] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
 
-  const [supportState, supportAction] = useActionState(postSupportAction, initialActionState);
-  const [rebuttalState, rebuttalAction] = useActionState(postRebutalAction, initialActionState);
+  const [supportState, supportAction, supportPending] = useActionState(
+    postSupportAction,
+    initialActionState,
+  );
+  const [rebuttalState, rebuttalAction, rebuttalPending] = useActionState(
+    postRebutalAction,
+    initialActionState,
+  );
 
   const rebuttalBlocked = focusOwnedByViewer;
+  /**
+   * 服务端才是复述检验的权威口径（含可选的 LLM 增强）。
+   * 本地启发式先放行、服务端复述检查拒绝时，直接回到复述步骤并展示服务端原因，
+   * 避免界面同时出现“复述检验通过”和错误提示。
+   */
+  const serverParaphraseError =
+    !serverParaphraseDismissed && rebuttalState.failedCheck === 'paraphrase'
+      ? (rebuttalState.error ?? '复述未通过服务端检验，请重新用自己的话概括对方观点')
+      : null;
+  const showParaphraseStep = !paraphrasePassed || Boolean(serverParaphraseError);
 
   function switchMode(next: Mode) {
     setMode(next);
     setParaphraseReport(null);
     setParaphrasePassed(false);
+    setServerParaphraseDismissed(false);
   }
 
   function checkParaphrase() {
@@ -198,8 +216,8 @@ export function ArenaComposer({
             />
           </label>
           <div className="mt-3 flex items-center gap-3">
-            <Button type="submit" variant="default">
-              提交支持
+            <Button type="submit" variant="default" disabled={supportPending}>
+              {supportPending ? '提交中…' : '提交支持'}
             </Button>
             <span className="text-[12px] text-muted-foreground">
               提交前会自动查重并识别不友善用语
@@ -211,7 +229,7 @@ export function ArenaComposer({
 
       {mode === 'con' && !rebuttalBlocked && (
         <div className="mt-3">
-          {!paraphrasePassed ? (
+          {showParaphraseStep ? (
             <div>
               <label className="block text-[13px] text-muted-foreground">
                 第一步 · 复述对方核心观点（通过复述检验后才会解锁反驳输入框）
@@ -222,6 +240,7 @@ export function ArenaComposer({
                     setParaphrase(event.target.value);
                     setParaphraseReport(null);
                     setParaphrasePassed(false);
+                    setServerParaphraseDismissed(true);
                   }}
                   placeholder="先写下对方观点的复述……"
                   maxLength={500}
@@ -235,9 +254,10 @@ export function ArenaComposer({
                   需包含对方主张的核心关键词，且不能整段照抄
                 </span>
               </div>
-              {paraphraseReport?.passed === false && (
+              {(serverParaphraseError || paraphraseReport?.passed === false) && (
                 <p role="alert" className="mt-2 text-[12.5px] leading-5 text-con">
-                  {paraphraseReport.checks.find((check) => check.status === 'flagged')?.message}
+                  {serverParaphraseError ??
+                    paraphraseReport?.checks.find((check) => check.status === 'flagged')?.message}
                 </p>
               )}
             </div>
@@ -273,8 +293,8 @@ export function ArenaComposer({
                 />
               </label>
               <div className="mt-3 flex items-center gap-3">
-                <Button type="submit" variant="default">
-                  提交反驳（挂红计时）
+                <Button type="submit" variant="default" disabled={rebuttalPending}>
+                  {rebuttalPending ? '提交中…' : '提交反驳（挂红计时）'}
                 </Button>
                 <button
                   type="button"
@@ -282,6 +302,7 @@ export function ArenaComposer({
                   onClick={() => {
                     setParaphrasePassed(false);
                     setParaphraseReport(null);
+                    setServerParaphraseDismissed(false);
                   }}
                 >
                   重新复述

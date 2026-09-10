@@ -22,7 +22,7 @@ export interface RescueMigrateFormsProps {
  * 只允许论点作者本人操作（服务层二次校验）。
  */
 export function RescueMigrateForms({ topicId, newParentId, claims }: RescueMigrateFormsProps) {
-  const [state, action] = useActionState(rescueMigrateAction, initialActionState);
+  const [state, action, pending] = useActionState(rescueMigrateAction, initialActionState);
 
   return (
     <section
@@ -47,8 +47,8 @@ export function RescueMigrateForms({ topicId, newParentId, claims }: RescueMigra
               <input type="hidden" name="topicId" value={topicId} />
               <input type="hidden" name="claimId" value={claim.id} />
               <input type="hidden" name="newParentId" value={newParentId} />
-              <Button type="submit" variant="outline" size="sm">
-                迁移到本修订版
+              <Button type="submit" variant="outline" size="sm" disabled={pending}>
+                {pending ? '迁移中…' : '迁移到本修订版'}
               </Button>
             </form>
           </div>

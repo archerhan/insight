@@ -4,9 +4,13 @@ const redirectMock = vi.fn((...args: unknown[]) => {
   void args;
   throw new Error('NEXT_REDIRECT');
 });
+const revalidatePathMock = vi.fn();
 
 vi.mock('next/navigation', () => ({
   redirect: (...args: unknown[]) => redirectMock(...args),
+}));
+vi.mock('next/cache', () => ({
+  revalidatePath: (...args: unknown[]) => revalidatePathMock(...args),
 }));
 
 vi.mock('@/auth', () => ({
@@ -32,6 +36,7 @@ const markAllNotificationsReadMock = vi.mocked(markAllNotificationsRead);
 
 beforeEach(() => {
   redirectMock.mockClear();
+  revalidatePathMock.mockClear();
   authMock.mockReset();
   getUserByIdMock.mockReset();
   markAllNotificationsReadMock.mockReset();
@@ -52,6 +57,7 @@ describe('通知动作', () => {
 
     await expect(markAllNotificationsReadAction()).rejects.toThrow('NEXT_REDIRECT');
     expect(markAllNotificationsReadMock).toHaveBeenCalledWith('u-1');
+    expect(revalidatePathMock).toHaveBeenCalledWith('/', 'layout');
     expect(redirectMock).toHaveBeenCalledWith('/notifications');
   });
 });

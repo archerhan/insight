@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Compass, FileText, Plus, Scale } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -172,6 +172,11 @@ export function NewTopicWizard({ initialType }: { initialType?: TopicType }) {
   const [bountyEnabled, setBountyEnabled] = useState(false);
   const [allowPublicRebuttal, setAllowPublicRebuttal] = useState(true);
   const [localError, setLocalError] = useState<string | null>(null);
+  /**
+   * 第三步切换瞬间禁用提交，避免“下一步”的点击序列与“发布话题”按钮
+   * 共用同一位置时被浏览器当成一次误提交（发布不可撤销）。
+   */
+  const publishReadyAtRef = useRef(0);
   const [publishState, publishAction, isPending] = useActionState(
     publishTopicAction,
     initialPublishState,
@@ -206,11 +211,14 @@ export function NewTopicWizard({ initialType }: { initialType?: TopicType }) {
       return;
     }
     setLocalError(null);
-    setStep((value) => Math.min(value + 1, 3));
+    const next = Math.min(step + 1, 3);
+    if (next === 3) publishReadyAtRef.current = Date.now() + 400;
+    setStep(next);
   }
 
   function goBack() {
     setLocalError(null);
+    publishReadyAtRef.current = 0;
     setStep((value) => Math.max(value - 1, 1));
   }
 
@@ -241,7 +249,8 @@ export function NewTopicWizard({ initialType }: { initialType?: TopicType }) {
     <form
       action={publishAction}
       onSubmit={(event) => {
-        if (step !== 3) event.preventDefault();
+        const ready = step === 3 && Date.now() >= publishReadyAtRef.current;
+        if (!ready) event.preventDefault();
       }}
     >
       <input type="hidden" name="type" value={type} />

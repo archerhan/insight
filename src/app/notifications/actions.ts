@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { markAllNotificationsRead } from '@/db/services/notifications';
@@ -13,5 +14,7 @@ export async function markAllNotificationsReadAction(): Promise<void> {
   const user = await getUserById(session.user.id);
   if (!user) redirect(loginHref('/notifications'));
   await markAllNotificationsRead(user.id);
+  // 重新校验根布局，确保顶栏未读角标在跳转前同步更新。
+  revalidatePath('/', 'layout');
   redirect('/notifications');
 }
