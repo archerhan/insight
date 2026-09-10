@@ -539,7 +539,7 @@ export function NewTopicWizard({ initialType }: { initialType?: TopicType }) {
         </section>
       )}
 
-      {(localError || (step < 3 && publishState.error)) && (
+      {(localError || publishState.error) && (
         <p role="alert" className="mt-4 rounded-lg bg-amber-bg px-3 py-2 text-[13px] text-amber">
           {localError ?? publishState.error}
         </p>
