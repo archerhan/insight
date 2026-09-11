@@ -139,13 +139,19 @@ sudo certbot --nginx -d 你的域名      # 自动改写为 443 并配置续期
 
 ```bash
 chmod +x /opt/debate/db-backup.sh /opt/debate/heal.sh
-(
-  crontab -l 2>/dev/null
-  echo "*/1 * * * * /opt/debate/heal.sh >> /var/log/debate-heal.log 2>&1"
-  echo "0 */6 * * * /opt/debate/db-backup.sh >> /var/log/debate-backup.log 2>&1"
-) | crontab -
-crontab -l
+sudo tee /etc/cron.d/debate > /dev/null <<'CRON'
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+*/1 * * * * root /opt/debate/heal.sh >> /var/log/debate-heal.log 2>&1
+0 */6 * * * root /opt/debate/db-backup.sh >> /var/log/debate-backup.log 2>&1
+CRON
+sudo chmod 644 /etc/cron.d/debate
+sudo systemctl restart crond
+cat /etc/cron.d/debate
 ```
+
+用 `/etc/cron.d/` 而不是 `crontab -l | … | crontab -`：后者在 crontab 为空时会因为管道退出码
+导致整个替换中断，反而写进一张空表。声明式文件没有这个坑，也方便版本化。
 
 - `heal.sh`（每分钟）：把健康检查为 `unhealthy` 的容器重启、把意外停止的长驻容器拉起，
   并在证书续期后重载 nginx。日志在 `/var/log/debate-heal.log`。
