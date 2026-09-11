@@ -22,6 +22,20 @@
       "when": 1789005924727,
       "tag": "0002_charming_shriek",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789089557576,
+      "tag": "0003_early_shaman",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789090742102,
+      "tag": "0004_hesitant_edwin_jarvis",
+      "breakpoints": true
     }
   ]
 }

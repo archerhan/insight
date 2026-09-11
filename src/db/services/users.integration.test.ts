@@ -69,3 +69,70 @@ describeDb('用户档案服务（集成）', () => {
     expect(updated?.courseCompletedAt?.toISOString()).toBe(completedAt.toISOString());
   });
 });
+
+/** 邮箱账号：注册建档、密码校验、改密后 password_changed_at 前移。 */
+describeDb('邮箱账号服务（集成）', () => {
+  let sql: ReturnType<typeof postgres>;
+  let userService: typeof import('./users');
+  const nonce = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const email = `ming-${nonce}@example.com`;
+  let createdId = '';
+
+  beforeAll(async () => {
+    sql = postgres(connectionString!, { max: 1, prepare: false });
+    process.env.DATABASE_URL = connectionString!;
+    userService = await import('./users');
+  });
+
+  afterAll(async () => {
+    await db.delete(users).where(like(users.email, `%${nonce}%`));
+    await sql.end();
+  });
+
+  it('注册建档：邮箱统一小写，密码只存哈希', async () => {
+    const created = await userService.createEmailUser({
+      email: `Ming-${nonce}@Example.com`,
+      displayName: '明',
+      password: 'zhuojian2026',
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    createdId = created.user.id;
+    expect(created.user.email).toBe(email);
+    expect(created.user.passwordHash).toMatch(/^scrypt\$/);
+    expect(created.user.passwordHash).not.toContain('zhuojian2026');
+    expect(created.user.passwordChangedAt).toBeInstanceOf(Date);
+    expect(await userService.findUserByEmail(email)).toMatchObject({ id: createdId });
+  });
+
+  it('邮箱唯一：重复注册返回 email_taken', async () => {
+    const again = await userService.createEmailUser({
+      email,
+      displayName: '另一个明',
+      password: 'zhuojian2026',
+    });
+    expect(again).toEqual({ ok: false, reason: 'email_taken' });
+  });
+
+  it('密码校验：正确通过，错误返回 null', async () => {
+    expect(await userService.verifyUserCredentials(email, 'zhuojian2026')).toMatchObject({
+      id: createdId,
+    });
+    expect(await userService.verifyUserCredentials(email, 'wrong-password-1')).toBeNull();
+    expect(await userService.verifyUserCredentials('nobody@example.com', 'zhuojian2026')).toBeNull();
+  });
+
+  it('改密码会刷新 password_changed_at（旧会话据此失效）', async () => {
+    const before = await userService.getUserById(createdId);
+    const changedAt = new Date(Date.now() + 1000);
+    const updated = await userService.updateUserPassword(createdId, 'zhuojian2027', changedAt);
+    expect(updated?.passwordChangedAt?.toISOString()).toBe(changedAt.toISOString());
+    expect(updated!.passwordChangedAt!.getTime()).toBeGreaterThan(
+      before!.passwordChangedAt!.getTime(),
+    );
+    expect(await userService.verifyUserCredentials(email, 'zhuojian2027')).toMatchObject({
+      id: createdId,
+    });
+    expect(await userService.verifyUserCredentials(email, 'zhuojian2026')).toBeNull();
+  });
+});

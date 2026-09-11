@@ -21,6 +21,14 @@ import {
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   authId: text('auth_id').unique(),
+  /** 邮箱登录标识（统一小写存储）；GitHub 用户暂不写入。 */
+  email: text('email').unique(),
+  /** scrypt 哈希（格式见 src/lib/auth/password.ts）；仅邮箱注册用户有值。 */
+  passwordHash: text('password_hash'),
+  /** 最近一次设置/重置密码的时间：用于让旧会话（JWT）失效。 */
+  passwordChangedAt: timestamp('password_changed_at', { withTimezone: true }),
+  /** 邮箱验证通过时间（注册验证码校验通过时写入）。 */
+  emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
   displayName: text('display_name').notNull(),
   avatarUrl: text('avatar_url'),
   bio: text('bio'),
@@ -30,6 +38,49 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * 一次性令牌：邮箱注册/找回密码等场景。
+ * 只落库 sha256 摘要（原文只在邮件链接里），带有效期与使用时间，单次有效。
+ */
+export const userTokens = pgTable(
+  'user_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(), // password_reset | email_verification
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('user_tokens_token_hash_idx').on(table.tokenHash),
+    index('user_tokens_user_type_idx').on(table.userId, table.type),
+  ],
+);
+
+/**
+ * 邮箱验证码：注册时证明邮箱归属。
+ * 只存 HMAC-SHA256 摘要（密钥用 AUTH_SECRET），带有效期、尝试次数与消费时间。
+ * 注册阶段用户还不存在，所以不复用 user_tokens（那里 user_id 是必填外键）。
+ */
+export const emailVerificationCodes = pgTable(
+  'email_verification_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    purpose: text('purpose').notNull().default('signup'), // signup | ...
+    codeHash: text('code_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    attempts: integer('attempts').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('email_verification_codes_email_idx').on(table.email, table.purpose)],
+);
 
 export const topics = pgTable(
   'topics',

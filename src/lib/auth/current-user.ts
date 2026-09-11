@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getUserById } from '@/db/services/users';
+import { isSessionStale } from '@/lib/auth/session';
 import { loginHref } from '@/lib/auth/url';
 
 /**
@@ -12,7 +13,11 @@ import { loginHref } from '@/lib/auth/url';
 export const getCurrentUser = cache(async () => {
   const session = await auth();
   if (!session?.user?.id) return null;
-  return getUserById(session.user.id);
+  const user = await getUserById(session.user.id);
+  if (!user) return null;
+  // 密码被重置后，旧 JWT 仍在浏览器里，靠这一句把它们判为未登录。
+  if (isSessionStale(user, session.user.pwdAt)) return null;
+  return user;
 });
 
 /** 需要登录的页面入口；未登录跳转到 /login?callbackUrl=当前路径。 */

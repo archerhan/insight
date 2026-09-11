@@ -125,6 +125,17 @@ AUTH_GITHUB_SECRET=...     # GitHub OAuth App Client Secret
 
 认证回调地址固定为 `{AUTH_URL}/api/auth/callback/github`；部署到服务器时把 `AUTH_URL` 换成正式域名，并在 GitHub OAuth App 中登记该回调。
 
+### 邮箱登录 / 注册 / 忘记密码
+
+- 登录方式：`/login` 同时提供邮箱密码与 GitHub 两种入口；
+- 注册：`/register` → **邮箱验证码**（6 位数字，10 分钟有效、最多试 5 次，同一邮箱 60 秒一次、每小时最多 5 次）+ 昵称 + 密码（至少 8 位且含字母和数字）→ 验证码核销后才建档，密码以 scrypt 加盐哈希落库（`users.password_hash`）→ 注册成功自动登录并进入须知页；验证码只存 HMAC-SHA256 摘要（密钥 AUTH_SECRET），库里拿不到明文；
+- 忘记密码：`/forgot-password` → 不区分邮箱是否存在，统一提示，避免枚举注册账号；命中后签发一次性令牌（只存 sha256 摘要，60 分钟有效）并发送重置邮件；
+- 重置密码：`/reset-password?token=…` → 校验令牌有效性与有效期 → 单事务内「令牌置为已用 + 写入新密码」；成功后跳转登录页；
+- 会话安全：重置密码会刷新 `users.password_changed_at`，签发时写入 JWT 的旧会话会在下一次请求被判为失效（`src/lib/auth/session.ts`）；
+- 防滥用：登录 / 注册 / 找回密码都做了内存限流（单实例部署够用，多实例时替换 `src/lib/auth/rate-limit.ts` 的实现即可）；
+- 邮件：优先 Resend（`RESEND_API_KEY` + `MAIL_FROM`，免费 3000 封/月），也支持通用 `SMTP_*`（阿里云邮件推送等）；本地未配置时邮件内容打印到控制台，生产未配置时注册/找回密码会明确报"邮件服务尚未配置"；`pnpm mail:test you@example.com` 可一键验证发信通道；
+- 已知限制：邮箱账号与 GitHub 账号目前各自独立（同一人用两种方式登录会得到两个档案），账号绑定留待后续迭代。
+
 ## M2 状态（已达成）
 
 - 广场首页：正在对线（含未决反驳/参与人数/根立场/标签）、最新结论书（仅 published 版本 + 采纳条目数）、立帖为证·即将揭晓（未来 reveal_at）、右侧"我的战绩速览"（派生计数）与登录引导；全部按公开读从真实表聚合，不依赖可能失真的反规范化列；

@@ -18,7 +18,8 @@
     "db:seed": "tsx src/db/seed-cli.ts",
     "db:seed:plaza": "tsx src/db/seed-plaza-cli.ts",
     "db:demo": "tsx src/db/demo-cli.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "mail:test": "tsx src/lib/email/test-cli.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -29,6 +30,7 @@
     "lucide-react": "^1.42.0",
     "next": "16.3.4",
     "next-auth": "5.0.0-beta.32",
+    "nodemailer": "^10.0.2",
     "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -40,6 +42,7 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.1",

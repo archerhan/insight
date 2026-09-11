@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Scale } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AuthCard } from '@/components/auth/auth-card';
+import { AuthAlert } from '@/components/auth/form-parts';
+import { EmailSignInForm } from '@/components/auth/email-signin-form';
 import { getCurrentUser } from '@/lib/auth/current-user';
+import { loginNotice } from '@/lib/auth/login-notice';
 import { safeRelativeUrl } from '@/lib/auth/url';
 import { signInWithGithub } from './actions';
 
@@ -34,47 +37,67 @@ export default async function LoginPage({
   if (user) redirect(next);
 
   const githubConfigured = Boolean(process.env.AUTH_GITHUB_ID);
+  const notice = loginNotice(params);
+  const registerHref = `/register?callbackUrl=${encodeURIComponent(next)}`;
 
   return (
-    <main className="mx-auto flex min-h-[calc(100dvh-3.5rem)] w-full max-w-md flex-col items-center justify-center px-4 py-12">
-      <div className="w-full rounded-xl border border-border bg-card p-8">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <Scale className="size-5" aria-hidden="true" />
-          </span>
-          <div>
-            <h1 className="text-xl font-medium tracking-tight">登录灼见</h1>
-            <p className="mt-1 text-[13px] leading-6 text-muted-foreground">
-              用 GitHub 登录。首次登录会自动创建你的灼见档案，
-              假名与战绩都会记录在你名下。
-            </p>
-          </div>
+    <AuthCard
+      title="登录灼见"
+      description="用邮箱或 GitHub 登录。首次登录会自动创建你的灼见档案，假名与战绩都记录在你名下。"
+      footer={
+        <p className="mt-5 text-[13px] text-muted-foreground">
+          还没有账号？{' '}
+          <Link href={registerHref} className="text-primary hover:underline">
+            注册
+          </Link>
+          {' · '}
+          <Link href="/forgot-password" className="text-primary hover:underline">
+            忘记密码
+          </Link>
+        </p>
+      }
+    >
+      {notice && (
+        <div className="mb-4">
+          <AuthAlert kind={notice.kind}>{notice.text}</AuthAlert>
         </div>
+      )}
 
-        <form action={signInWithGithub} className="mt-6 flex flex-col gap-3">
-          <input type="hidden" name="callbackUrl" value={next} />
-          <button
-            type="submit"
-            disabled={!githubConfigured}
-            className={cn(
-              'inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#24292f] px-4 text-sm font-medium text-white transition-colors hover:bg-[#1b1f24] disabled:cursor-not-allowed disabled:opacity-50',
-            )}
-          >
-            <GitHubMark className="size-4" />
-            使用 GitHub 登录
-          </button>
-        </form>
+      <EmailSignInForm callbackUrl={next} />
 
-        {!githubConfigured && (
-          <p className="mt-3 rounded-lg bg-amber-bg px-3 py-2 text-[12.5px] leading-5 text-amber">
-            GitHub 登录尚未配置：请在 .env.local 中填入 AUTH_GITHUB_ID 与
-            AUTH_GITHUB_SECRET（在 GitHub Settings → Developer settings → OAuth Apps 创建）。
-          </p>
-        )}
+      <div className="my-5 flex items-center gap-3 text-[12.5px] text-muted-foreground">
+        <span className="h-px flex-1 bg-border" aria-hidden="true" />
+        或
+        <span className="h-px flex-1 bg-border" aria-hidden="true" />
       </div>
-      <Link href="/" className="mt-5 text-[13px] text-muted-foreground hover:text-foreground">
+
+      <form action={signInWithGithub} className="flex flex-col gap-3">
+        <input type="hidden" name="callbackUrl" value={next} />
+        <button
+          type="submit"
+          disabled={!githubConfigured}
+          className={cn(
+            'inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#24292f] px-4 text-sm font-medium text-white transition-colors hover:bg-[#1b1f24] disabled:cursor-not-allowed disabled:opacity-50',
+          )}
+        >
+          <GitHubMark className="size-4" />
+          使用 GitHub 登录
+        </button>
+      </form>
+
+      {!githubConfigured && (
+        <p className="mt-3 rounded-lg bg-amber-bg px-3 py-2 text-[12.5px] leading-5 text-amber">
+          GitHub 登录尚未配置：请填入 AUTH_GITHUB_ID 与 AUTH_GITHUB_SECRET
+          （在 GitHub Settings → Developer settings → OAuth Apps 创建）。
+        </p>
+      )}
+
+      <Link
+        href="/"
+        className="mt-5 block text-center text-[13px] text-muted-foreground hover:text-foreground"
+      >
         暂不登录，先逛逛 →
       </Link>
-    </main>
+    </AuthCard>
   );
 }

@@ -67,6 +67,19 @@ openssl rand -base64 32   # CRON_SECRET
 必填：`POSTGRES_PASSWORD`、`AUTH_SECRET`、`AUTH_URL`（正式域名，https）、`AUTH_GITHUB_ID`、`AUTH_GITHUB_SECRET`、`CRON_SECRET`。
 GitHub OAuth App 的回调地址登记为 `{AUTH_URL}/api/auth/callback/github`。
 
+邮箱注册（验证码）和忘记密码（重置链接）都需要 SMTP：`SMTP_HOST`、`SMTP_PORT`、`SMTP_SECURE`、`SMTP_USER`、`SMTP_PASS`、`SMTP_FROM`
+（阿里云邮件推送地址为 `smtpdm.aliyun.com`，端口 465、加密开启；发件地址需在控制台验证过）。
+阿里云邮件推送的免费额度是「每个主账户共 2000 封、每天最多 200 封」；未配置 SMTP 时注册与找回密码都会提示"邮件服务尚未配置"。
+
+也可以改用 Resend（免费 3000 封/月、每天 100 封，不要求域名备案，只需在 DNS 加 SPF/DKIM 记录）：
+
+```bash
+RESEND_API_KEY=re_xxx
+MAIL_FROM=灼见 <no-reply@burninginsight.com>   # 域名需在 Resend 控制台验证通过
+```
+
+两个通道都配了时优先走 Resend；本地可用 `pnpm mail:test you@example.com` 验证发信是否通畅。
+
 可选：若服务器拉不动 Docker Hub 基础镜像，在 ACR 里再建 `postgres`、`node` 两个仓库，
 从能拉动的机器把它们推上去，然后在 `.env.production` 里打开 `POSTGRES_IMAGE` / `NODE_IMAGE` 两行。
 
