@@ -131,6 +131,13 @@ services:
     depends_on:
       app:
         condition: service_started
+    healthcheck:
+      # 不带 SNI 访问 443 会命中默认 server（裸域），能返回 200 说明 nginx 与上游都活着
+      test: ["CMD-SHELL", "wget -q -O /dev/null --no-check-certificate https://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     logging: *logging
 
   # Let's Encrypt 自动续期：每 12 小时检查一次，证书走 webroot 校验

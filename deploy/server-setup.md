@@ -133,26 +133,45 @@ sudo dnf install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d 你的域名      # 自动改写为 443 并配置续期
 ```
 
-## 6. 数据库备份
+## 6. 备份与进程自愈
+
+两个脚本由 Deploy 工作流自动同步到 `/opt/debate/`，只需在服务器上装一次 crontab：
 
 ```bash
-sudo tee /opt/backups/db-backup.sh > /dev/null <<'SH'
-#!/usr/bin/env bash
-set -euo pipefail
-cd /opt/debate
-docker compose --env-file .env.production exec -T db \
-  pg_dump -U debate debate | gzip > "/opt/backups/debate-$(date +%F).sql.gz"
-find /opt/backups -name 'debate-*.sql.gz' -mtime +14 -delete
-SH
-sudo chmod +x /opt/backups/db-backup.sh
+chmod +x /opt/debate/db-backup.sh /opt/debate/heal.sh
+(
+  crontab -l 2>/dev/null
+  echo "*/1 * * * * /opt/debate/heal.sh >> /var/log/debate-heal.log 2>&1"
+  echo "0 */6 * * * /opt/debate/db-backup.sh >> /var/log/debate-backup.log 2>&1"
+) | crontab -
+crontab -l
 ```
 
+- `heal.sh`（每分钟）：把健康检查为 `unhealthy` 的容器重启、把意外停止的长驻容器拉起，
+  并在证书续期后重载 nginx。日志在 `/var/log/debate-heal.log`。
+- `db-backup.sh`（每 6 小时）：导出到 `/opt/backups/debate-日期-时间.sql.gz`，
+  另外保留一份 `debate-latest.sql.gz`，自动清理 14 天前的文件。
+
+手动执行与验证：
+
 ```bash
-# 每天 04:00 备份，保留最近 14 天
-(crontab -l 2>/dev/null; echo "0 4 * * * /opt/backups/db-backup.sh") | crontab -
+/opt/debate/db-backup.sh && ls -lh /opt/backups | tail -3
+/opt/debate/heal.sh && tail -5 /var/log/debate-heal.log
+```
+
+恢复演练（恢复到临时库，不会影响生产库）：
+
+```bash
+cd /opt/debate
+docker compose --env-file .env.production exec -T db psql -U debate -d postgres -c 'DROP DATABASE IF EXISTS restore_check'
+docker compose --env-file .env.production exec -T db psql -U debate -d postgres -c 'CREATE DATABASE restore_check'
+gunzip -c /opt/backups/debate-latest.sql.gz | docker compose --env-file .env.production exec -T db psql -U debate -d restore_check >/dev/null
+docker compose --env-file .env.production exec -T db psql -U debate -d restore_check -tAc 'select count(*) from topics'
+docker compose --env-file .env.production exec -T db psql -U debate -d postgres -c 'DROP DATABASE restore_check'
 ```
 
 数据本体在 `db-data` 卷里，`docker compose down` 不会删；只有 `down -v` 才会清空。
+注意本机备份与数据库在同一块云盘上，无法抵御整机或磁盘故障——异地备份（OSS）属于后续计划。
 
 ## 7. 日常发布与回滚
 

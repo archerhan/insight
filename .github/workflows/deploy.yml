@@ -161,6 +161,11 @@ jobs:
           # 整个 docker/ 目录一起同步（含 scheduler.mjs 与 nginx 配置）
           scp -i ~/.ssh/id_deploy -P "$SSH_PORT" -r \
             docker "$SSH_USER@$SSH_HOST:$SSH_APP_DIR/"
+          # 宿主侧运维脚本（备份 / 自愈），由服务器 crontab 调用
+          scp -i ~/.ssh/id_deploy -P "$SSH_PORT" \
+            deploy/heal.sh deploy/db-backup.sh "$SSH_USER@$SSH_HOST:$SSH_APP_DIR/"
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+            "chmod +x '$SSH_APP_DIR/heal.sh' '$SSH_APP_DIR/db-backup.sh'"
 
       - name: 拉取镜像并重启服务
         if: steps.check.outputs.enabled == 'true'
