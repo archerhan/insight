@@ -80,6 +80,22 @@ MAIL_FROM=灼见 <no-reply@burninginsight.com>   # 域名需在 Resend 控制台
 
 两个通道都配了时优先走 Resend；本地可用 `pnpm mail:test you@example.com` 验证发信是否通畅。
 
+改用阿里云邮件推送（华东1）时，控制台里要先完成「发信域名验证 → 新建发信地址 → 设置 SMTP 密码」，
+然后在 `.env.production` 写：
+
+```bash
+MAIL_PROVIDER=smtp                          # 关键：否则残留的 RESEND_API_KEY 会继续抢优先级
+MAIL_FROM=灼见 <no-reply@burninginsight.com>  # 必须与控制台的发信地址一致
+SMTP_HOST=smtpdm.aliyun.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=no-reply@burninginsight.com
+SMTP_PASS=控制台设置的 SMTP 密码
+RESEND_API_KEY=                             # 切走 Resend 时清空
+```
+
+云服务器已禁用 25 端口，务必用 465（SSL）；新发信地址创建后需等 10 分钟才能发信。
+
 可选：若服务器拉不动 Docker Hub 基础镜像，在 ACR 里再建 `postgres`、`node` 两个仓库，
 从能拉动的机器把它们推上去，然后在 `.env.production` 里打开 `POSTGRES_IMAGE` / `NODE_IMAGE` 两行。
 

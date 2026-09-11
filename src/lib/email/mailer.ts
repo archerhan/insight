@@ -20,6 +20,8 @@ export type MailResult = { ok: true } | { ok: false; error: MailFailure; detail?
 
 export type MailerMode = 'resend' | 'smtp' | 'console' | 'disabled';
 
+export type MailProvider = 'resend' | 'smtp';
+
 export interface ResendConfig {
   apiKey: string;
   from: string;
@@ -51,9 +53,27 @@ export function isResendConfigured(env: Env = process.env): boolean {
   return Boolean(env.RESEND_API_KEY?.trim() && fromAddress(env));
 }
 
-export function mailerMode(env: Env = process.env): MailerMode {
+/**
+ * 通道选择：MAIL_PROVIDER 显式指定（resend/smtp）优先；
+ * 未指定时按 有 RESEND_API_KEY 走 Resend、否则有 SMTP_HOST 走 SMTP。
+ */
+export function resolveMailProvider(env: Env = process.env): MailProvider | null {
+  const explicit = env.MAIL_PROVIDER?.trim().toLowerCase();
+  if (explicit === 'resend' || explicit === 'smtp') return explicit;
   if (isResendConfigured(env)) return 'resend';
   if (isMailerConfigured(env)) return 'smtp';
+  return null;
+}
+
+export function mailerMode(env: Env = process.env): MailerMode {
+  const provider = resolveMailProvider(env);
+  const configured =
+    provider === 'resend'
+      ? isResendConfigured(env)
+      : provider === 'smtp'
+        ? isMailerConfigured(env)
+        : false;
+  if (configured && provider) return provider;
   return env.NODE_ENV === 'production' ? 'disabled' : 'console';
 }
 

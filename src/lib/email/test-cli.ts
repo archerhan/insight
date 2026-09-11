@@ -37,7 +37,9 @@ async function main() {
   console.info(
     mode === 'console'
       ? '[mail:test] 当前是控制台模式（未配置 Resend/SMTP），邮件内容已打印在上方日志里'
-      : '[mail:test] 发送成功（Resend 控制台 Emails 页可看到投递记录）',
+      : mode === 'resend'
+        ? '[mail:test] 发送成功（Resend 控制台 Emails 页可看到投递记录）'
+        : '[mail:test] 发送成功（可在阿里云邮件推送控制台「发送记录」查看投递状态）',
   );
 }
 

@@ -18,6 +18,7 @@ import {
   resetMailerCache,
   resolveResendConfig,
   resolveSmtpConfig,
+  resolveMailProvider,
   sendMail,
 } from './mailer';
 
@@ -118,6 +119,24 @@ describe('邮件发送', () => {
       'a@example.com',
     );
     expect(fromAddress({})).toBe('');
+  });
+
+  it('MAIL_PROVIDER 可显式指定通道（避免 Resend key 残留时抢优先级）', () => {
+    const both = {
+      RESEND_API_KEY: 're_key',
+      SMTP_HOST: 'smtpdm.aliyun.com',
+      MAIL_FROM: '灼见 <no-reply@burninginsight.com>',
+      NODE_ENV: 'production',
+    };
+    expect(resolveMailProvider(both)).toBe('resend');
+    expect(resolveMailProvider({ ...both, MAIL_PROVIDER: 'smtp' })).toBe('smtp');
+    expect(mailerMode({ ...both, MAIL_PROVIDER: 'smtp' })).toBe('smtp');
+    expect(mailerMode({ ...both, MAIL_PROVIDER: 'resend' })).toBe('resend');
+    // 指定了通道但没配齐 → 生产环境判定为未配置
+    expect(mailerMode({ MAIL_PROVIDER: 'smtp', NODE_ENV: 'production' })).toBe('disabled');
+    expect(mailerMode({ MAIL_PROVIDER: 'smtp', NODE_ENV: 'development' })).toBe('console');
+    // 非法值按自动选择处理
+    expect(resolveMailProvider({ ...both, MAIL_PROVIDER: 'whatever' })).toBe('resend');
   });
 });
 
