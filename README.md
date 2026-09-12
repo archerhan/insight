@@ -3,6 +3,8 @@
 思想与立场的碰撞：让观点接受检验、让讨论沉淀结论、让"被说服"被记录。
 
 > **项目状态：已暂停（2026-09-12）。** 代码、数据模型与设计文档全部保留；暂停原因与重启条件见下方，历史里程碑（M0–M5）见文末。
+>
+> 收尾动作：GitHub Actions 已停用（工作流文件重命名为 `*.disabled`，恢复时改回 `.yml` 即可）；代码状态冻结在标签 `pause-2026-09-12`。
 
 ## 为什么暂停
 
@@ -32,7 +34,7 @@
 - TailwindCSS + shadcn/ui
 - PostgreSQL 16（Docker 自建）+ Drizzle ORM
 - Vitest + React Testing Library（单元/组件测试）
-- GitHub Actions（CI）→ Docker Compose（部署）
+- ~~GitHub Actions（CI）→ Docker Compose（部署）~~（已随项目暂停停用）
 
 ## 目录
 
@@ -103,7 +105,7 @@ APP_ENV_FILE=.env.production docker compose --env-file .env.production up -d --n
 - 迁移在每次 `up` 时自动执行（drizzle-kit 跳过已应用迁移），发布顺序天然安全；
 - 外层用 Nginx/Caddy 反代到 `127.0.0.1:3000` 并签证书，GitHub OAuth 回调登记为 `{AUTH_URL}/api/auth/callback/github`。
 - 完整上线手册见 [deploy/server-setup.md](deploy/server-setup.md)，生产环境变量模板见 [deploy/.env.production.example](deploy/.env.production.example)；
-- 发布流水线见 [.github/workflows/deploy.yml](.github/workflows/deploy.yml)：main 上的 CI 通过后自动构建并推送 ACR，再 SSH 到服务器拉取重启。
+- 发布流水线见 [.github/workflows/deploy.yml.disabled](.github/workflows/deploy.yml.disabled)（已停用，保留以便重启）：main 上的 CI 通过后自动构建并推送 ACR，再 SSH 到服务器拉取重启。
 
 质量门禁（CI 与本地一致）：
 
@@ -127,7 +129,7 @@ pnpm build
 - 测试基座：Vitest + React Testing Library + 纯函数/组件/路由用例；CI 起 Postgres 测试库跑 DB 服务层集成测试；
 - 覆盖率门槛：核心状态机与树操作分支 ≥85%，全仓（执行代码）行 ≥70%；
 - UI 骨架：shadcn/ui（base-nova 风格）已初始化，占位首页/布局就位；
-- CI：GitHub Actions（lint / typecheck / test / coverage / build），main 与 PR 全绿才可合并。
+- CI：GitHub Actions（lint / typecheck / test / coverage / build），main 与 PR 全绿才可合并。**（已停用）**
 
 ## M1 状态（已达成）
 
