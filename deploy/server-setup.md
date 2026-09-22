@@ -9,9 +9,9 @@
 
 | 名称 | 值 | 说明 |
 | --- | --- | --- |
-| `ACR_REGISTRY` | `registry.example.com` | 公网地址，CI 推送用 |
-| `ACR_NAMESPACE` | `archerhan` | 命名空间 |
-| `ACR_USERNAME` | `your-registry-user` | 控制台「访问凭证」页的登录用户名 |
+| `ACR_REGISTRY` | `<你的镜像仓库公网地址>` | 公网地址，CI 推送用 |
+| `ACR_NAMESPACE` | `<命名空间>` | 命名空间 |
+| `ACR_USERNAME` | `<控制台里的登录用户名>` | 控制台「访问凭证」页的登录用户名 |
 | `ACR_PASSWORD` | 控制台设置的 Registry 固定密码 | |
 | `SSH_HOST` | 服务器公网 IP | 不填则只推镜像、不自动部署 |
 | `SSH_USER` | 登录用户，如 `root` | |
@@ -46,10 +46,10 @@ sudo mkdir -p /opt/debate /opt/backups && sudo chown -R "$USER" /opt/debate /opt
 
 ```bash
 # 内网地址（推荐：同地域，快且不计公网流量）
-docker login --username=your-registry-user registry.example.com
+docker login --username=<登录用户名> <镜像仓库内网地址>
 
 # 内网不通（跨地域/跨 VPC）时改用公网地址
-docker login --username=your-registry-user registry.example.com
+docker login --username=<登录用户名> <镜像仓库公网地址>
 ```
 
 登录后凭证存在服务器的 `/root/.docker/config.json`，之后拉取不再需要密码。
